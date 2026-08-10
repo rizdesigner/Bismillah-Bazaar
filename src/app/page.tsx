@@ -1,6 +1,21 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const session = await getServerSession(authOptions);
+
+  if (session?.user?.role === "admin") {
+    redirect("/admin");
+  }
+
+  if (session?.user?.role === "customer") {
+    redirect("/catalog");
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col bg-zinc-50 px-6">
       <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
