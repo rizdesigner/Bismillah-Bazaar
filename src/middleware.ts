@@ -31,7 +31,7 @@ export default withAuth(
       }
     }
 
-    if (["/catalog", "/orders", "/account"].includes(pathname)) {
+    if (["/catalog", "/orders"].includes(pathname)) {
       if (status !== "active") {
         return NextResponse.redirect(new URL("/register/pending", req.url));
       }
