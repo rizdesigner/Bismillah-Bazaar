@@ -1,15 +1,18 @@
 import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { ChangePasswordForm } from "@/components/change-password-form";
 
 export const metadata = { title: "Account" };
 
+export const dynamic = "force-dynamic";
+
 export default async function AccountPage() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    return null;
+    redirect("/login");
   }
 
   const user = await prisma.user.findUnique({
@@ -17,7 +20,7 @@ export default async function AccountPage() {
   });
 
   if (!user) {
-    return null;
+    redirect("/");
   }
 
   return (
