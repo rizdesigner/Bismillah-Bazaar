@@ -72,6 +72,12 @@ export async function PATCH(
         finalTotal: finalTotal !== undefined ? finalTotal : undefined,
         eta: eta ? new Date(eta) : null,
         status: status || undefined,
+        deliveredAt:
+          status === "delivered"
+            ? order.deliveredAt ?? new Date()
+            : status && status !== "delivered"
+            ? null
+            : undefined,
       },
     });
 

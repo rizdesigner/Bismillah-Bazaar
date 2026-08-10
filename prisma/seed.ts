@@ -134,6 +134,7 @@ async function main() {
       originalTotal: 133.5,
       finalTotal: 133.5,
       eta: new Date(now - 5 * day),
+      deliveredAt: new Date(now - 5 * day + 2 * 60 * 60 * 1000),
       items: {
         create: [
           { itemId: byName("Beef Mince").id, requestedKg: 15, fulfilledKg: 15 },

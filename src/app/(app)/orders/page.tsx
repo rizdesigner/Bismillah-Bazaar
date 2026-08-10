@@ -12,21 +12,26 @@ export default async function OrdersPage() {
     return null;
   }
 
-  const orders = await prisma.order.findMany({
-    where: {
-      userId: session.user.id,
-    },
-    include: {
-      items: {
-        include: {
-          item: true,
+  const [orders, inventory] = await Promise.all([
+    prisma.order.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      include: {
+        items: {
+          include: {
+            item: true,
+          },
         },
       },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+    prisma.inventory.findMany({
+      orderBy: { category: "asc" },
+    }),
+  ]);
 
   const serializedOrders = orders.map((order) => ({
     ...order,
@@ -34,6 +39,7 @@ export default async function OrdersPage() {
     finalTotal: order.finalTotal ? Number(order.finalTotal) : null,
     createdAt: order.createdAt.toISOString(),
     eta: order.eta ? order.eta.toISOString() : null,
+    deliveredAt: order.deliveredAt ? order.deliveredAt.toISOString() : null,
     items: order.items.map((item) => ({
       ...item,
       requestedKg: Number(item.requestedKg),
@@ -45,6 +51,11 @@ export default async function OrdersPage() {
     })),
   }));
 
+  const serializedInventory = inventory.map((item) => ({
+    ...item,
+    basePriceKg: Number(item.basePriceKg),
+  }));
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-zinc-900">Orders</h1>
@@ -52,7 +63,7 @@ export default async function OrdersPage() {
         Track purchase orders and confirm quotes.
       </p>
 
-      <OrderHistory orders={serializedOrders} />
+      <OrderHistory orders={serializedOrders} inventory={serializedInventory} />
     </div>
   );
 }

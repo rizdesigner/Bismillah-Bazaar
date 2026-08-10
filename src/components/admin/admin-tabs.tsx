@@ -26,6 +26,7 @@ type Order = {
   originalTotal: number;
   finalTotal: number | null;
   eta: string | null;
+  deliveredAt: string | null;
   createdAt: string;
   user: {
     restaurantName: string | null;
@@ -53,11 +54,15 @@ type Props = {
 };
 
 export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Props) {
-  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending">("inventory");
+  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered">("inventory");
+
+  const activeOrders = orders.filter((o) => o.status !== "delivered");
+  const deliveredOrders = orders.filter((o) => o.status === "delivered");
 
   const tabs = [
     { id: "inventory" as const, label: "Inventory", count: inventory.length },
-    { id: "orders" as const, label: "Orders", count: orders.length },
+    { id: "orders" as const, label: "Orders", count: activeOrders.length },
+    { id: "delivered" as const, label: "Delivered", count: deliveredOrders.length },
     { id: "users" as const, label: "Active", count: customers.length },
     { id: "pending" as const, label: "Pending", count: pendingCustomers.length },
   ];
@@ -86,7 +91,8 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
       </div>
 
       {activeTab === "inventory" && <InventoryTab inventory={inventory} />}
-      {activeTab === "orders" && <OrdersTab orders={orders} />}
+      {activeTab === "orders" && <OrdersTab orders={activeOrders} />}
+      {activeTab === "delivered" && <DeliveredOrdersTab orders={deliveredOrders} />}
       {activeTab === "users" && <UsersTab customers={customers} />}
       {activeTab === "pending" && <PendingApprovalsTab customers={pendingCustomers} />}
     </div>
@@ -808,6 +814,114 @@ function OrdersTab({ orders }: { orders: Order[] }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
+  const flattenedOrders = orders.flatMap((order) =>
+    order.items.map((item) => ({
+      orderId: order.id,
+      restaurantName: order.user.restaurantName || "N/A",
+      itemName: item.item.itemName,
+      quantity: item.requestedKg,
+      fulfilledQty: item.fulfilledKg,
+      finalPrice: order.finalTotal ? order.finalTotal / order.items.length : null,
+      eta: order.eta,
+      deliveredAt: order.deliveredAt,
+      createdAt: order.createdAt,
+    }))
+  );
+
+  return (
+    <div>
+      {flattenedOrders.length === 0 && (
+        <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center sm:p-12">
+          <p className="text-xs text-zinc-500 sm:text-sm">No delivered orders yet</p>
+        </div>
+      )}
+
+      {/* Mobile: Card Layout */}
+      <div className="space-y-2 sm:hidden">
+        {flattenedOrders.map((row, idx) => (
+          <div
+            key={`${row.orderId}-${row.itemName}-${idx}`}
+            className="rounded-lg border border-zinc-200 bg-white p-3"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <span className="inline-flex rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-700">
+                  delivered
+                </span>
+                <h4 className="mt-1.5 text-sm font-medium text-zinc-900">
+                  {row.restaurantName}
+                </h4>
+                <p className="mt-0.5 text-xs text-zinc-600">{row.itemName}</p>
+                <div className="mt-2 space-y-0.5 text-[10px] text-zinc-600">
+                  <p>Qty: {row.quantity}kg{row.fulfilledQty !== row.quantity && ` → ${row.fulfilledQty}kg`}</p>
+                  <p>Price: {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}</p>
+                  <p>Delivered: {row.deliveredAt ? new Date(row.deliveredAt).toLocaleString() : "—"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: Table Layout */}
+      <div className="hidden overflow-x-auto rounded-lg border border-zinc-200 bg-white sm:block">
+        <table className="w-full min-w-[700px]">
+          <thead className="border-b border-zinc-200 bg-zinc-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Restaurant
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Item
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Qty (kg)
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Final Price
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Order Date
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Delivered
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-100">
+            {flattenedOrders.map((row, idx) => (
+              <tr key={`${row.orderId}-${row.itemName}-${idx}`} className="hover:bg-zinc-50">
+                <td className="px-4 py-3 text-sm font-medium text-zinc-900">
+                  {row.restaurantName}
+                </td>
+                <td className="px-4 py-3 text-sm text-zinc-900">{row.itemName}</td>
+                <td className="px-4 py-3 text-right text-sm text-zinc-900">
+                  {row.quantity}
+                  {row.fulfilledQty !== row.quantity && (
+                    <span className="ml-1 text-xs text-emerald-600">
+                      → {row.fulfilledQty}
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-right text-sm font-medium text-zinc-900">
+                  {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}
+                </td>
+                <td className="px-4 py-3 text-sm text-zinc-600">
+                  {new Date(row.createdAt).toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-sm font-medium text-zinc-900">
+                  {row.deliveredAt ? new Date(row.deliveredAt).toLocaleString() : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

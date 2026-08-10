@@ -66,6 +66,7 @@ model Order {
   originalTotal Decimal      @db.Decimal(10, 2) @map("original_total")
   finalTotal    Decimal?     @db.Decimal(10, 2) @map("final_total")
   eta           DateTime?    @map("eta")
+  deliveredAt   DateTime?    @map("delivered_at")
   status        OrderStatus  @default(pending)
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
