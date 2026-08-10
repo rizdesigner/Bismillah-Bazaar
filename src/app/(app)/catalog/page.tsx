@@ -3,6 +3,8 @@ import { CatalogTabs } from "@/components/catalog-tabs";
 
 export const metadata = { title: "Catalog" };
 
+export const dynamic = "force-dynamic";
+
 export default async function CatalogPage() {
   const inventory = await prisma.inventory.findMany({
     where: {

@@ -3,6 +3,8 @@ import { AdminTabs } from "@/components/admin/admin-tabs";
 
 export const metadata = { title: "Admin Dashboard" };
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   const [inventory, orders, activeCustomers, pendingCustomers] = await Promise.all([
     prisma.inventory.findMany({
