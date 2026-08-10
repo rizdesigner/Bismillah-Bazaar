@@ -1,0 +1,38 @@
+Environments
+Environments help manage the deployment lifecycle on the Vercel platform.
+Name
+Branch Tracking
+Domains
+Production
+main
+bismillah-bazaar.vercel.app
++2
+Preview
+All unassigned git branches
+No custom domains
+Development
+Accessible via CLI
+No custom domains
+Custom Environments
+Get extra custom environments that can be added to your project.
+
+Default Custom Environments
+
+0 Included
+
+Additional Custom Environments
+
+$50 for every 5 custom environments
+
+0
+
+0 Custom Environments
+
+0 included, 0 additional
+
+Cost
+
+$0 (0 × $50 / month)
+
+This feature is available on the Pro plan.
+
