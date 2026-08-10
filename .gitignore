@@ -48,3 +48,4 @@ public/swe-worker*
 # deployment
 deploy.bat
 DEPLOYMENT_CHECKLIST.md
+*logs.txt
