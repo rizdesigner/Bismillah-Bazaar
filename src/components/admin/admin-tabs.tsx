@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ResetLinkModal } from "./reset-link-modal";
 
 type InventoryItem = {
   id: string;
@@ -55,6 +56,11 @@ type Props = {
 
 export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Props) {
   const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered">("inventory");
+  const [resetTarget, setResetTarget] = useState<{
+    id: string;
+    email: string;
+    restaurantName: string | null;
+  } | null>(null);
 
   const activeOrders = orders.filter((o) => o.status !== "delivered");
   const deliveredOrders = orders.filter((o) => o.status === "delivered");
@@ -93,8 +99,10 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
       {activeTab === "inventory" && <InventoryTab inventory={inventory} />}
       {activeTab === "orders" && <OrdersTab orders={activeOrders} />}
       {activeTab === "delivered" && <DeliveredOrdersTab orders={deliveredOrders} />}
-      {activeTab === "users" && <UsersTab customers={customers} />}
-      {activeTab === "pending" && <PendingApprovalsTab customers={pendingCustomers} />}
+      {activeTab === "users" && <UsersTab customers={customers} onResetPassword={setResetTarget} />}
+      {activeTab === "pending" && <PendingApprovalsTab customers={pendingCustomers} onResetPassword={setResetTarget} />}
+
+      <ResetLinkModal user={resetTarget} onClose={() => setResetTarget(null)} />
     </div>
   );
 }
@@ -926,7 +934,13 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
   );
 }
 
-function UsersTab({ customers }: { customers: Customer[] }) {
+function UsersTab({
+  customers,
+  onResetPassword,
+}: {
+  customers: Customer[];
+  onResetPassword: (user: { id: string; email: string; restaurantName: string | null }) => void;
+}) {
   return (
     <>
       {/* Mobile: Card Layout */}
@@ -947,13 +961,25 @@ function UsersTab({ customers }: { customers: Customer[] }) {
                 Joined: {new Date(customer.createdAt).toLocaleDateString()}
               </p>
             </div>
+            <button
+              onClick={() =>
+                onResetPassword({
+                  id: customer.id,
+                  email: customer.email,
+                  restaurantName: customer.restaurantName,
+                })
+              }
+              className="mt-2 rounded px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-50"
+            >
+              Reset Password
+            </button>
           </div>
         ))}
       </div>
 
       {/* Desktop: Table Layout */}
       <div className="hidden overflow-x-auto rounded-lg border border-zinc-200 bg-white sm:block">
-        <table className="w-full min-w-[500px]">
+        <table className="w-full min-w-[600px]">
           <thead className="border-b border-zinc-200 bg-zinc-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
@@ -970,6 +996,9 @@ function UsersTab({ customers }: { customers: Customer[] }) {
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Joined
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Actions
               </th>
             </tr>
           </thead>
@@ -989,6 +1018,20 @@ function UsersTab({ customers }: { customers: Customer[] }) {
                 <td className="px-4 py-3 text-sm text-zinc-600">
                   {new Date(customer.createdAt).toLocaleDateString()}
                 </td>
+                <td className="px-4 py-3 text-right">
+                  <button
+                    onClick={() =>
+                      onResetPassword({
+                        id: customer.id,
+                        email: customer.email,
+                        restaurantName: customer.restaurantName,
+                      })
+                    }
+                    className="text-xs font-medium text-emerald-600 hover:text-emerald-500"
+                  >
+                    Reset Password
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -998,7 +1041,13 @@ function UsersTab({ customers }: { customers: Customer[] }) {
   );
 }
 
-function PendingApprovalsTab({ customers }: { customers: Customer[] }) {
+function PendingApprovalsTab({
+  customers,
+  onResetPassword,
+}: {
+  customers: Customer[];
+  onResetPassword: (user: { id: string; email: string; restaurantName: string | null }) => void;
+}) {
   const handleApprove = async (id: string) => {
     try {
       const res = await fetch(`/api/admin/customers/${id}`, {
@@ -1070,6 +1119,18 @@ function PendingApprovalsTab({ customers }: { customers: Customer[] }) {
                 </p>
               </div>
               <div className="flex gap-2">
+                <button
+                  onClick={() =>
+                    onResetPassword({
+                      id: customer.id,
+                      email: customer.email,
+                      restaurantName: customer.restaurantName,
+                    })
+                  }
+                  className="flex-1 rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 sm:flex-none sm:px-4 sm:py-2 sm:text-sm"
+                >
+                  Reset
+                </button>
                 <button
                   onClick={() => handleApprove(customer.id)}
                   className="flex-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 sm:flex-none sm:px-4 sm:py-2 sm:text-sm"

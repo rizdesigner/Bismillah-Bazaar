@@ -32,17 +32,18 @@ enum OrderStatus {
 }
 
 model User {
-  id             String     @id @default(uuid()) @db.Uuid
-  email          String     @unique
-  password       String?
-  role           UserRole   @default(customer)
-  restaurantName String?    @map("restaurant_name")
-  phone          String?
-  location       String?
-  status         UserStatus @default(pending_approval)
-  createdAt      DateTime   @default(now()) @map("created_at")
-  orders         Order[]
-  notifications  Notification[]
+  id                 String               @id @default(uuid()) @db.Uuid
+  email              String               @unique
+  password           String?
+  role               UserRole             @default(customer)
+  restaurantName     String?              @map("restaurant_name")
+  phone              String?
+  location           String?
+  status             UserStatus           @default(pending_approval)
+  createdAt          DateTime             @default(now()) @map("created_at")
+  orders             Order[]
+  notifications      Notification[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
@@ -104,4 +105,17 @@ model OrderItem {
   @@index([orderId])
   @@index([itemId])
   @@map("order_items")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @map("token_hash") @unique
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }

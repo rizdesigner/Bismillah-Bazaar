@@ -173,6 +173,12 @@ export function AdminHeader() {
             <span className="text-zinc-600">
               {session?.user?.email}
             </span>
+            <Link
+              href="/admin/settings"
+              className="text-zinc-600 hover:text-emerald-600"
+            >
+              Settings
+            </Link>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="text-zinc-600 hover:text-emerald-600"
