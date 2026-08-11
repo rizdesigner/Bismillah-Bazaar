@@ -118,12 +118,6 @@ export default function LoginPage() {
           Create an account
         </Link>
       </p>
-
-      <div className="mt-6 rounded-lg bg-zinc-100 p-3 text-[10px] text-zinc-600 sm:mt-8 sm:p-4 sm:text-xs">
-        <p className="font-medium">Test credentials:</p>
-        <p className="mt-1">Admin: admin@bismillahbazaar.com / admin123</p>
-        <p>Customer: purchasing@spicegrill.com / customer123</p>
-      </div>
     </div>
   );
 }
