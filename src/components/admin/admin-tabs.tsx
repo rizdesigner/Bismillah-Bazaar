@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ResetLinkModal } from "./reset-link-modal";
+import { ClientPricingManager } from "./client-pricing-manager";
 
 type InventoryItem = {
   id: string;
@@ -56,7 +57,7 @@ type Props = {
 };
 
 export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Props) {
-  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered">("inventory");
+  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered" | "pricing">("inventory");
   const [resetTarget, setResetTarget] = useState<{
     id: string;
     email: string;
@@ -72,6 +73,7 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
     { id: "delivered" as const, label: "Delivered", count: deliveredOrders.length },
     { id: "users" as const, label: "Active", count: customers.length },
     { id: "pending" as const, label: "Pending", count: pendingCustomers.length },
+    { id: "pricing" as const, label: "Pricing", count: null },
   ];
 
   return (
@@ -89,9 +91,11 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
               }`}
             >
               {tab.label}
-              <span className="ml-1 rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] sm:ml-2 sm:px-2 sm:text-xs">
-                {tab.count}
-              </span>
+              {tab.count !== null && (
+                <span className="ml-1 rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] sm:ml-2 sm:px-2 sm:text-xs">
+                  {tab.count}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -102,6 +106,17 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
       {activeTab === "delivered" && <DeliveredOrdersTab orders={deliveredOrders} />}
       {activeTab === "users" && <UsersTab customers={customers} onResetPassword={setResetTarget} />}
       {activeTab === "pending" && <PendingApprovalsTab customers={pendingCustomers} onResetPassword={setResetTarget} />}
+      {activeTab === "pricing" && (
+        <ClientPricingManager
+          customers={customers}
+          inventory={inventory.map((item) => ({
+            id: item.id,
+            itemName: item.itemName,
+            category: item.category,
+            basePriceKg: item.basePriceKg,
+          }))}
+        />
+      )}
 
       <ResetLinkModal user={resetTarget} onClose={() => setResetTarget(null)} />
     </div>

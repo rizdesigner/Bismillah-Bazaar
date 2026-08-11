@@ -7,6 +7,8 @@ type Product = {
   itemName: string;
   category: string;
   basePriceKg: number;
+  priceKg: number;
+  hasCustomPrice: boolean;
   imageUrl: string | null;
 };
 
@@ -29,7 +31,7 @@ export function ProductCard({ product }: { product: Product }) {
         itemId: product.id,
         itemName: product.itemName,
         category: product.category,
-        basePriceKg: product.basePriceKg,
+        basePriceKg: product.priceKg,
       },
       0.5
     );
@@ -62,9 +64,14 @@ export function ProductCard({ product }: { product: Product }) {
       </div>
       <h3 className="text-sm font-semibold text-zinc-900 sm:text-base">{product.itemName}</h3>
       <p className="mt-1 text-base font-bold text-emerald-600 sm:text-lg">
-        ${product.basePriceKg.toFixed(2)}
+        ${product.priceKg.toFixed(2)}
         <span className="text-xs font-normal text-zinc-500 sm:text-sm">/kg</span>
       </p>
+      {product.hasCustomPrice && (
+        <p className="mt-0.5 text-[10px] text-zinc-500 sm:text-xs">
+          Custom price
+        </p>
+      )}
       <div className="mt-2 flex items-center justify-between sm:mt-3">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <button
@@ -95,7 +102,7 @@ export function ProductCard({ product }: { product: Product }) {
       </div>
       {qty > 0 && (
         <p className="mt-1.5 text-right text-xs font-medium text-emerald-700 sm:mt-2 sm:text-sm">
-          ${(qty * product.basePriceKg).toFixed(2)}
+          ${(qty * product.priceKg).toFixed(2)}
         </p>
       )}
     </div>

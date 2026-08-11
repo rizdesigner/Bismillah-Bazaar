@@ -8,6 +8,8 @@ type InventoryItem = {
   itemName: string;
   category: string;
   basePriceKg: number;
+  priceKg: number;
+  hasCustomPrice: boolean;
   imageUrl: string | null;
 };
 

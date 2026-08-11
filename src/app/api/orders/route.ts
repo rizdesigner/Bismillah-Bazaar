@@ -26,6 +26,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const userId = token.id as string;
+
+    const clientOverrides = await prisma.clientProductOverride.findMany({
+      where: { userId },
+    });
+
+    const overridesMap = new Map(
+      clientOverrides.map((o) => [o.itemId, o])
+    );
+
     let originalTotal = 0;
     const validatedItems: { itemId: string; requestedKg: number; basePriceKg: number }[] = [];
 
@@ -41,7 +51,19 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const price = Number(inventory.basePriceKg);
+      const override = overridesMap.get(item.itemId);
+      
+      if (override && override.isAvailable === false) {
+        return NextResponse.json(
+          { error: `Item not available for your account: ${inventory.itemName}` },
+          { status: 400 }
+        );
+      }
+
+      const price = override?.customPriceKg
+        ? Number(override.customPriceKg)
+        : Number(inventory.basePriceKg);
+
       originalTotal += price * item.requestedKg;
       validatedItems.push({
         itemId: item.itemId,
@@ -52,7 +74,7 @@ export async function POST(req: NextRequest) {
 
     const order = await prisma.order.create({
       data: {
-        userId: token.id as string,
+        userId,
         originalTotal,
         requestedEta: requestedEta ? new Date(requestedEta) : null,
         status: "pending",
