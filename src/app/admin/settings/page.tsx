@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { ChangePasswordForm } from "@/components/change-password-form";
+import { SmtpSettingsForm } from "@/components/admin/smtp-settings-form";
 
 export const metadata = { title: "Admin Settings" };
 
@@ -22,8 +23,20 @@ export default async function AdminSettingsPage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="text-xl font-bold text-zinc-900 sm:text-2xl">Settings</h1>
       <p className="mt-1 text-sm text-zinc-600">
-        Manage your admin account security.
+        Manage your admin account and email configuration.
       </p>
+
+      <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-4 sm:p-6">
+        <h2 className="text-sm font-bold text-zinc-900 sm:text-base">
+          Email Settings
+        </h2>
+        <p className="mt-1 text-xs text-zinc-600">
+          Configure SMTP for delivery receipts and password reset emails.
+        </p>
+        <div className="mt-4">
+          <SmtpSettingsForm />
+        </div>
+      </div>
 
       <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-4 sm:p-6">
         <h2 className="text-sm font-bold text-zinc-900 sm:text-base">

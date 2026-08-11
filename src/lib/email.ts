@@ -1,31 +1,59 @@
 import nodemailer from "nodemailer";
+import { prisma } from "@/lib/prisma";
+import { decrypt } from "@/lib/crypto";
 
-export function isEmailConfigured(): boolean {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
+async function getSmtpConfig() {
+  const settings = await prisma.settings.findMany({
+    where: {
+      key: {
+        in: ["smtp_host", "smtp_port", "smtp_secure", "smtp_user", "smtp_pass", "smtp_from"],
+      },
+    },
+  });
+
+  const config = settings.reduce((acc, s) => {
+    acc[s.key] = s.value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  return {
+    host: config.smtp_host || process.env.SMTP_HOST,
+    port: Number(config.smtp_port || process.env.SMTP_PORT || 587),
+    secure: (config.smtp_secure || process.env.SMTP_SECURE) === "true",
+    user: config.smtp_user || process.env.SMTP_USER,
+    pass: config.smtp_pass ? decrypt(config.smtp_pass) : process.env.SMTP_PASS || "",
+    from: config.smtp_from || process.env.SMTP_FROM || config.smtp_user || process.env.SMTP_USER,
+  };
+}
+
+export async function isEmailConfigured(): Promise<boolean> {
+  const config = await getSmtpConfig();
+  return Boolean(config.host && config.user);
 }
 
 export async function sendPasswordResetEmail(
   to: string,
   resetUrl: string
 ): Promise<boolean> {
-  if (!isEmailConfigured()) {
+  if (!(await isEmailConfigured())) {
     console.log("[email] SMTP not configured, skipping password reset email to", to);
     return false;
   }
 
   try {
+    const config = await getSmtpConfig();
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === "true",
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS || "",
+        user: config.user,
+        pass: config.pass,
       },
     });
 
     await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: config.from,
       to,
       subject: "Reset your Bismillah Bazaar password",
       text: `Reset your password using this link. It expires in 1 hour:\n\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`,
@@ -68,19 +96,20 @@ export async function sendDeliveryReceipt(
   to: string,
   order: DeliveryOrder
 ): Promise<boolean> {
-  if (!isEmailConfigured()) {
+  if (!(await isEmailConfigured())) {
     console.log("[email] SMTP not configured, skipping delivery receipt to", to);
     return false;
   }
 
   try {
+    const config = await getSmtpConfig();
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === "true",
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS || "",
+        user: config.user,
+        pass: config.pass,
       },
     });
 
@@ -101,7 +130,7 @@ export async function sendDeliveryReceipt(
       .join("");
 
     await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: config.from,
       to,
       subject: `Delivery Receipt — Order #${order.id.slice(0, 8)}`,
       text: `Your order has been delivered on ${deliveredDate}.\n\nItems:\n${order.items.map((oi) => `• ${oi.item.itemName}: ${Number(oi.fulfilledKg ?? oi.requestedKg)} kg`).join("\n")}\n\nTotal: $${finalTotal}\n\nThank you for ordering from Bismillah Bazaar.`,
