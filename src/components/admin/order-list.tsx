@@ -19,7 +19,8 @@ type Order = {
   status: string;
   originalTotal: number;
   finalTotal: number | null;
-  eta: string | null;
+  requestedEta: string | null;
+  adminEta: string | null;
   createdAt: string;
   user: {
     id: string;
@@ -127,9 +128,14 @@ export function OrderList({ orders }: { orders: Order[] }) {
                   </p>
                 )}
               </div>
-              {order.eta && (
+              {order.requestedEta && (
                 <p className="text-zinc-600">
-                  ETA: {new Date(order.eta).toLocaleDateString()}
+                  Requested: {new Date(order.requestedEta).toLocaleString()}
+                </p>
+              )}
+              {order.adminEta && (
+                <p className="font-medium text-emerald-700">
+                  Admin ETA: {new Date(order.adminEta).toLocaleString()}
                 </p>
               )}
             </div>

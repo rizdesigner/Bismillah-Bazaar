@@ -17,7 +17,8 @@ type Order = {
   status: string;
   originalTotal: number;
   finalTotal: number | null;
-  eta: string | null;
+  requestedEta: string | null;
+  adminEta: string | null;
   items: OrderItem[];
 };
 
@@ -39,8 +40,8 @@ export function OrderEditModal({
   const [finalTotal, setFinalTotal] = useState(
     order.finalTotal ?? order.originalTotal
   );
-  const [eta, setEta] = useState(
-    order.eta ? new Date(order.eta).toISOString().split("T")[0] : ""
+  const [adminEta, setAdminEta] = useState(
+    order.adminEta ? new Date(order.adminEta).toISOString().slice(0, 16) : ""
   );
   const [status, setStatus] = useState(order.status);
   const [loading, setLoading] = useState(false);
@@ -59,7 +60,7 @@ export function OrderEditModal({
             fulfilledKg: item.fulfilledKg,
           })),
           finalTotal,
-          eta: eta || null,
+          adminEta: adminEta || null,
           status,
         }),
       });
@@ -94,6 +95,17 @@ export function OrderEditModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {order.requestedEta && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-blue-600">
+                Customer Requested Delivery
+              </p>
+              <p className="mt-1 text-sm font-semibold text-blue-900">
+                {new Date(order.requestedEta).toLocaleString()}
+              </p>
+            </div>
+          )}
+
           <div>
             <h3 className="mb-3 text-sm font-semibold text-zinc-900">
               Line Items
@@ -159,12 +171,12 @@ export function OrderEditModal({
 
             <div>
               <label className="block text-sm font-medium text-zinc-700">
-                ETA
+                Admin ETA
               </label>
               <input
-                type="date"
-                value={eta}
-                onChange={(e) => setEta(e.target.value)}
+                type="datetime-local"
+                value={adminEta}
+                onChange={(e) => setAdminEta(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
               />
             </div>

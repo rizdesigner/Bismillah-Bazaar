@@ -1,6 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendDeliveryReceipt } from "@/lib/email";
 
 export async function PATCH(
   req: NextRequest,
@@ -17,7 +18,7 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const { items, finalTotal, eta, status } = await req.json();
+    const { items, finalTotal, adminEta, status } = await req.json();
 
     const order = await prisma.order.findUnique({
       where: { id },
@@ -55,10 +56,10 @@ export async function PATCH(
       changes.push(`Price: $${Number(order.originalTotal).toFixed(2)} → $${finalTotal.toFixed(2)}`);
     }
 
-    if (eta) {
-      const newEta = new Date(eta);
-      if (!order.eta || newEta.getTime() !== order.eta.getTime()) {
-        changes.push(`ETA: ${newEta.toLocaleDateString()}`);
+    if (adminEta) {
+      const newEta = new Date(adminEta);
+      if (!order.adminEta || newEta.getTime() !== order.adminEta.getTime()) {
+        changes.push(`Admin ETA: ${newEta.toLocaleDateString()}`);
       }
     }
 
@@ -66,11 +67,11 @@ export async function PATCH(
       changes.push(`Status: ${order.status} → ${status}`);
     }
 
-    await prisma.order.update({
+    const updatedOrder = await prisma.order.update({
       where: { id },
       data: {
         finalTotal: finalTotal !== undefined ? finalTotal : undefined,
-        eta: eta ? new Date(eta) : null,
+        adminEta: adminEta ? new Date(adminEta) : null,
         status: status || undefined,
         deliveredAt:
           status === "delivered"
@@ -79,9 +80,14 @@ export async function PATCH(
             ? null
             : undefined,
       },
+      include: {
+        items: {
+          include: { item: true },
+        },
+        user: true,
+      },
     });
 
-    // Always create a notification when admin updates an order
     const messageParts = ["Your order has been updated by the admin."];
     
     if (changes.length > 0) {
@@ -98,7 +104,9 @@ export async function PATCH(
       },
     });
 
-    console.log("Notification created for user:", order.userId, "order:", id);
+    if (status === "delivered" && order.user.email) {
+      await sendDeliveryReceipt(order.user.email, updatedOrder);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

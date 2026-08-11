@@ -138,7 +138,7 @@ export async function PATCH(
       data: {
         originalTotal,
         finalTotal: null,
-        eta: null,
+        adminEta: null,
         status: "pending",
         deliveredAt: null,
       },

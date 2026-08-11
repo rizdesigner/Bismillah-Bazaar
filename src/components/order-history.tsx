@@ -18,7 +18,8 @@ type Order = {
   status: string;
   originalTotal: number;
   finalTotal: number | null;
-  eta: string | null;
+  requestedEta: string | null;
+  adminEta: string | null;
   deliveredAt: string | null;
   createdAt: string;
   items: OrderItem[];
@@ -259,12 +260,10 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                     </p>
                   )}
                 </div>
-                {order.eta && (
+                {(order.requestedEta || order.adminEta) && (
                   <div className="text-right">
-                    <p className="text-xs text-zinc-500">ETA</p>
-                    <p className="font-medium text-zinc-900">
-                      {new Date(order.eta).toLocaleString()}
-                    </p>
+                    {order.requestedEta && <p className="text-xs text-zinc-500">Requested: {new Date(order.requestedEta).toLocaleString()}</p>}
+                    {order.adminEta && <p className="text-xs font-medium text-emerald-700">Admin: {new Date(order.adminEta).toLocaleString()}</p>}
                   </div>
                 )}
               </div>
@@ -341,12 +340,10 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                     </p>
                   )}
                 </div>
-                {order.eta && (
+                {(order.requestedEta || order.adminEta) && (
                   <div className="text-right">
-                    <p className="text-xs text-zinc-500">ETA</p>
-                    <p className="font-medium text-zinc-900">
-                      {new Date(order.eta).toLocaleString()}
-                    </p>
+                    {order.requestedEta && <p className="text-xs text-zinc-500">Requested: {new Date(order.requestedEta).toLocaleString()}</p>}
+                    {order.adminEta && <p className="text-xs font-medium text-emerald-700">Admin: {new Date(order.adminEta).toLocaleString()}</p>}
                   </div>
                 )}
               </div>
@@ -377,7 +374,7 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
             </div>
 
             <p className="mb-4 rounded-lg bg-amber-50 p-2 text-[10px] text-amber-700 sm:text-xs">
-              Editing will revert this order to Pending for the admin to re-review. Final price and ETA will be reset.
+              Editing will revert this order to Pending for the admin to re-review. Final price and admin ETA will be reset.
             </p>
 
             <div className="space-y-2">

@@ -35,18 +35,6 @@ async function main() {
     },
   });
 
-  const pendingCustomer = await prisma.user.create({
-    data: {
-      email: "owner@tandoorinights.com",
-      password: await bcrypt.hash("customer123", 10),
-      role: "customer",
-      restaurantName: "Tandoori Nights",
-      phone: "+1 555 0999",
-      location: "98 High St, Springfield",
-      status: "pending_approval",
-    },
-  });
-
   type SeedInventory = {
     itemName: string;
     category: "Poultry" | "Meat" | "Dried";
@@ -86,6 +74,7 @@ async function main() {
       userId: activeCustomer.id,
       status: "pending",
       originalTotal: 61.5,
+      requestedEta: new Date(now + 2 * day),
       items: {
         create: [
           { itemId: byName("Chicken Breast").id, requestedKg: 5, fulfilledKg: null },
@@ -98,26 +87,11 @@ async function main() {
   const order2 = await prisma.order.create({
     data: {
       userId: activeCustomer.id,
-      status: "modified",
-      originalTotal: 119.2,
-      finalTotal: 95.0,
-      eta: new Date(now + 2 * day),
-      items: {
-        create: [
-          { itemId: byName("Chicken Thigh").id, requestedKg: 10, fulfilledKg: 8 },
-          { itemId: byName("Beef Mince").id, requestedKg: 8, fulfilledKg: 5 },
-        ],
-      },
-    },
-  });
-
-  const order3 = await prisma.order.create({
-    data: {
-      userId: activeCustomer.id,
       status: "confirmed",
       originalTotal: 54.6,
       finalTotal: 54.6,
-      eta: new Date(now + 3 * day),
+      requestedEta: new Date(now + 3 * day),
+      adminEta: new Date(now + 3 * day),
       items: {
         create: [
           { itemId: byName("Chicken Breast").id, requestedKg: 6, fulfilledKg: 6 },
@@ -127,28 +101,11 @@ async function main() {
     },
   });
 
-  const order4 = await prisma.order.create({
-    data: {
-      userId: activeCustomer.id,
-      status: "delivered",
-      originalTotal: 133.5,
-      finalTotal: 133.5,
-      eta: new Date(now - 5 * day),
-      deliveredAt: new Date(now - 5 * day + 2 * 60 * 60 * 1000),
-      items: {
-        create: [
-          { itemId: byName("Beef Mince").id, requestedKg: 15, fulfilledKg: 15 },
-        ],
-      },
-    },
-  });
-
   console.log({
     admin: admin.email,
     activeCustomer: activeCustomer.email,
-    pendingCustomer: pendingCustomer.email,
     inventoryItems: inventory.length,
-    orders: [order1.id, order2.id, order3.id, order4.id].length,
+    orders: [order1.id, order2.id].length,
   });
 }
 

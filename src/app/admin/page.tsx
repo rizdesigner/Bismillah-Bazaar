@@ -53,7 +53,8 @@ export default async function AdminPage() {
     originalTotal: Number(order.originalTotal),
     finalTotal: order.finalTotal ? Number(order.finalTotal) : null,
     createdAt: order.createdAt.toISOString(),
-    eta: order.eta ? order.eta.toISOString() : null,
+    requestedEta: order.requestedEta ? order.requestedEta.toISOString() : null,
+    adminEta: order.adminEta ? order.adminEta.toISOString() : null,
     deliveredAt: order.deliveredAt ? order.deliveredAt.toISOString() : null,
     items: order.items.map((item) => ({
       ...item,

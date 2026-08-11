@@ -8,6 +8,7 @@ export default function CartPage() {
   const router = useRouter();
   const { items, total, updateQty, removeItem, clear } = useCart();
   const [placing, setPlacing] = useState(false);
+  const [requestedEta, setRequestedEta] = useState("");
 
   const handlePlaceOrder = async () => {
     setPlacing(true);
@@ -17,6 +18,7 @@ export default function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items: items.map((i) => ({ itemId: i.itemId, requestedKg: i.quantity })),
+          requestedEta: requestedEta || null,
         }),
       });
 
@@ -98,6 +100,22 @@ export default function CartPage() {
             </p>
           </div>
         ))}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-3 sm:mt-6 sm:p-4">
+        <label className="block text-sm font-semibold text-zinc-900">
+          Preferred Delivery Time
+        </label>
+        <p className="mt-1 text-xs text-zinc-500">
+          Select when you&apos;d like this order delivered (admin may adjust).
+        </p>
+        <input
+          type="datetime-local"
+          value={requestedEta}
+          onChange={(e) => setRequestedEta(e.target.value)}
+          min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
+          className="mt-2 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 sm:px-4 sm:py-2.5"
+        />
       </div>
 
       <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-3 sm:mt-6 sm:p-4">

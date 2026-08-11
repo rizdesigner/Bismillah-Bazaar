@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { NotificationBell } from "./notification-bell";
+import { InstallButton } from "./install-button";
 
 export function AppHeader() {
   const { data: session } = useSession();
@@ -44,6 +45,7 @@ export function AppHeader() {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <InstallButton />
           <NotificationBell />
 
           <div className="relative" ref={menuRef}>

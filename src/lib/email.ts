@@ -49,3 +49,94 @@ export async function sendPasswordResetEmail(
     return false;
   }
 }
+
+type DeliveryOrder = {
+  id: string;
+  originalTotal: any;
+  finalTotal: any;
+  requestedEta: Date | null;
+  adminEta: Date | null;
+  deliveredAt: Date | null;
+  items: {
+    requestedKg: any;
+    fulfilledKg: any;
+    item: { itemName: string };
+  }[];
+};
+
+export async function sendDeliveryReceipt(
+  to: string,
+  order: DeliveryOrder
+): Promise<boolean> {
+  if (!isEmailConfigured()) {
+    console.log("[email] SMTP not configured, skipping delivery receipt to", to);
+    return false;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS || "",
+      },
+    });
+
+    const finalTotal = Number(order.finalTotal ?? order.originalTotal).toFixed(2);
+    const deliveredDate = order.deliveredAt
+      ? order.deliveredAt.toLocaleDateString()
+      : new Date().toLocaleDateString();
+
+    const itemRows = order.items
+      .map(
+        (oi) =>
+          `<tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #e4e4e7;font-size:14px">${oi.item.itemName}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;text-align:center">${Number(oi.requestedKg)} kg</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;text-align:center">${Number(oi.fulfilledKg ?? oi.requestedKg)} kg</td>
+          </tr>`
+      )
+      .join("");
+
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to,
+      subject: `Delivery Receipt — Order #${order.id.slice(0, 8)}`,
+      text: `Your order has been delivered on ${deliveredDate}.\n\nItems:\n${order.items.map((oi) => `• ${oi.item.itemName}: ${Number(oi.fulfilledKg ?? oi.requestedKg)} kg`).join("\n")}\n\nTotal: $${finalTotal}\n\nThank you for ordering from Bismillah Bazaar.`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#fff">
+          <div style="background:#059669;padding:24px;text-align:center">
+            <h1 style="color:#fff;margin:0;font-size:22px">Bismillah Bazaar</h1>
+            <p style="color:#d1fae5;margin:4px 0 0;font-size:14px">Delivery Receipt</p>
+          </div>
+          <div style="padding:24px">
+            <p style="font-size:16px;margin:0 0 16px">Your order has been <strong style="color:#059669">delivered</strong> on ${deliveredDate}.</p>
+            <table style="width:100%;border-collapse:collapse;margin:16px 0">
+              <thead>
+                <tr style="background:#f4f4f5">
+                  <th style="padding:8px 12px;text-align:left;font-size:12px;color:#52525b;text-transform:uppercase">Item</th>
+                  <th style="padding:8px 12px;text-align:center;font-size:12px;color:#52525b;text-transform:uppercase">Requested</th>
+                  <th style="padding:8px 12px;text-align:center;font-size:12px;color:#52525b;text-transform:uppercase">Fulfilled</th>
+                </tr>
+              </thead>
+              <tbody>${itemRows}</tbody>
+            </table>
+            <div style="text-align:right;font-size:20px;font-weight:bold;color:#059669;margin:16px 0">
+              Total: $${finalTotal}
+            </div>
+            <p style="font-size:12px;color:#71717a;margin-top:24px;text-align:center">
+              Order #${order.id.slice(0, 8)} &middot; Thank you for ordering from Bismillah Bazaar
+            </p>
+          </div>
+        </div>
+      `,
+    });
+
+    return true;
+  } catch (error) {
+    console.error("[email] Failed to send delivery receipt:", error);
+    return false;
+  }
+}

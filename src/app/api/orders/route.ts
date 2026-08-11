@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { items } = await req.json();
+    const { items, requestedEta } = await req.json();
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId: token.id as string,
         originalTotal,
+        requestedEta: requestedEta ? new Date(requestedEta) : null,
         status: "pending",
         items: {
           create: validatedItems.map((item) => ({

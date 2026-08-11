@@ -26,7 +26,8 @@ type Order = {
   status: string;
   originalTotal: number;
   finalTotal: number | null;
-  eta: string | null;
+  requestedEta: string | null;
+  adminEta: string | null;
   deliveredAt: string | null;
   createdAt: string;
   user: {
@@ -460,7 +461,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
   const [editForm, setEditForm] = useState({
     items: [] as { id: string; fulfilledKg: number }[],
     finalTotal: 0,
-    eta: "",
+    adminEta: "",
     status: "pending",
   });
   const [loading, setLoading] = useState(false);
@@ -475,7 +476,8 @@ function OrdersTab({ orders }: { orders: Order[] }) {
       quantity: item.requestedKg,
       fulfilledQty: item.fulfilledKg,
       finalPrice: order.finalTotal ? order.finalTotal / order.items.length : null,
-      eta: order.eta,
+      requestedEta: order.requestedEta,
+      adminEta: order.adminEta,
       createdAt: order.createdAt,
       status: order.status,
     }))
@@ -489,7 +491,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
         fulfilledKg: item.fulfilledKg ?? item.requestedKg,
       })),
       finalTotal: order.finalTotal ?? order.originalTotal,
-      eta: order.eta ? new Date(order.eta).toISOString().slice(0, 16) : "",
+      adminEta: order.adminEta ? new Date(order.adminEta).toISOString().slice(0, 16) : "",
       status: order.status,
     });
   };
@@ -553,7 +555,8 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 <div className="mt-2 space-y-0.5 text-[10px] text-zinc-600">
                   <p>Qty: {row.quantity}kg {row.fulfilledQty !== row.quantity && `→ ${row.fulfilledQty}kg`}</p>
                   <p>Price: {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}</p>
-                  <p>ETA: {row.eta ? new Date(row.eta).toLocaleString() : "—"}</p>
+                  {row.requestedEta && <p>Req: {new Date(row.requestedEta).toLocaleString()}</p>}
+                  {row.adminEta && <p className="font-medium text-emerald-700">Admin: {new Date(row.adminEta).toLocaleString()}</p>}
                 </div>
               </div>
               <button
@@ -594,7 +597,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 Final Price
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                ETA
+                Delivery
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Order Date
@@ -628,7 +631,9 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                   {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}
                 </td>
                 <td className="px-4 py-3 text-sm text-zinc-600">
-                  {row.eta ? new Date(row.eta).toLocaleString() : "—"}
+                  {row.requestedEta && <div className="text-xs">Req: {new Date(row.requestedEta).toLocaleString()}</div>}
+                  {row.adminEta && <div className="text-xs font-medium text-emerald-700">Admin: {new Date(row.adminEta).toLocaleString()}</div>}
+                  {!row.requestedEta && !row.adminEta && "—"}
                 </td>
                 <td className="px-4 py-3 text-sm text-zinc-600">
                   {new Date(row.createdAt).toLocaleString()}
@@ -772,13 +777,13 @@ function OrdersTab({ orders }: { orders: Order[] }) {
 
                 <div>
                   <label className="block text-xs font-medium text-zinc-700 sm:text-sm">
-                    ETA (Date & Time)
+                    Admin ETA (Date & Time)
                   </label>
                   <input
                     type="datetime-local"
-                    value={editForm.eta}
+                    value={editForm.adminEta}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, eta: e.target.value })
+                      setEditForm({ ...editForm, adminEta: e.target.value })
                     }
                     className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
                   />
@@ -835,7 +840,7 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
       quantity: item.requestedKg,
       fulfilledQty: item.fulfilledKg,
       finalPrice: order.finalTotal ? order.finalTotal / order.items.length : null,
-      eta: order.eta,
+      adminEta: order.adminEta,
       deliveredAt: order.deliveredAt,
       createdAt: order.createdAt,
     }))
