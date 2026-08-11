@@ -49,7 +49,7 @@ export async function PATCH(
       await prisma.notification.create({
         data: {
           userId: id,
-          orderId: "", // No order associated
+          orderId: null, // No order associated
           type: "account_update",
           title: notification.title,
           message: notification.message,
