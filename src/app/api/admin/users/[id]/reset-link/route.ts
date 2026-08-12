@@ -1,6 +1,7 @@
-import { getToken } from "next-auth/jwt";
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { createPasswordResetToken } from "@/lib/reset-token";
 
 export async function POST(
@@ -8,9 +9,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!token || token.role !== "admin") {
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -19,16 +29,20 @@ export async function POST(
 
     const { id } = await params;
 
-    const user = await prisma.user.findUnique({ where: { id } });
+    const { data: targetUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    if (!user) {
+    if (!targetUser) {
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
       );
     }
 
-    const resetToken = await createPasswordResetToken(user.id);
+    const resetToken = await createPasswordResetToken(targetUser.id);
     const resetUrl = `${req.nextUrl.origin}/reset-password?token=${resetToken}`;
 
     return NextResponse.json({ resetUrl });

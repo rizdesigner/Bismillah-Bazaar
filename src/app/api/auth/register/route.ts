@@ -1,46 +1,54 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/password";
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
+import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { email, password, restaurantName, phone, location } = body;
+    const { email, password, restaurantName, phone, location } = await req.json();
 
     if (!email || !password || !restaurantName) {
       return NextResponse.json(
-        { error: "Email, password, and restaurant name are required" },
+        { error: 'Email, password, and restaurant name are required' },
         { status: 400 }
       );
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
+    const supabase = await createClient();
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (authError || !authData.user) {
       return NextResponse.json(
-        { error: "Email already registered" },
-        { status: 409 }
+        { error: authError?.message || 'Registration failed' },
+        { status: 400 }
       );
     }
 
-    const hashedPassword = await hashPassword(password);
-
-    await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        restaurantName,
-        phone,
-        location,
-        role: "customer",
-        status: "pending_approval",
-      },
+    const { error: profileError } = await supabase.from('users').insert({
+      id: authData.user.id,
+      email,
+      restaurant_name: restaurantName,
+      phone: phone || null,
+      location: location || null,
+      role: 'customer',
+      status: 'pending_approval',
     });
 
+    if (profileError) {
+      return NextResponse.json(
+        { error: 'Failed to create profile' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Registration error:", error);
+  } catch {
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: 'Registration failed' },
       { status: 500 }
     );
   }

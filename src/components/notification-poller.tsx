@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "./session-provider";
 import { emitToast } from "@/lib/toast-events";
 
 export function NotificationPoller() {
-  const { data: session } = useSession();
+  const { profile } = useSession();
   const lastCountRef = useRef<number>(0);
   const lastIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!session?.user?.id) return;
+    if (!profile?.id) return;
 
     const fetchNotifications = async () => {
       try {
@@ -23,7 +23,6 @@ export function NotificationPoller() {
         const notifications = await res.json();
         const unread = notifications.filter((n: { read: boolean }) => !n.read);
 
-        // Only toast for NEW notifications (not ones we've already seen)
         const newNotifications = unread.filter(
           (n: { id: string }) => !lastIdsRef.current.has(n.id)
         );
@@ -52,14 +51,12 @@ export function NotificationPoller() {
       }
     };
 
-    // Initial fetch
     fetchNotifications();
 
-    // Poll every 3 seconds
     const interval = setInterval(fetchNotifications, 3000);
 
     return () => clearInterval(interval);
-  }, [session?.user?.id]);
+  }, [profile?.id]);
 
   return null;
 }

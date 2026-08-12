@@ -1,38 +1,36 @@
-import { getToken } from "next-auth/jwt";
-import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
+import { NextResponse, NextRequest } from 'next/server';
 
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!token) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    console.log("Fetching notifications for user:", token.id);
+    const { data: notifications, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
 
-    const notifications = await prisma.notification.findMany({
-      where: {
-        userId: token.id as string,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 50, // Limit to last 50 notifications
-    });
+    if (error) {
+      console.error("Notifications fetch error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch notifications" },
+        { status: 500 }
+      );
+    }
 
-    console.log("Found", notifications.length, "notifications for user:", token.id);
-
-    const serialized = notifications.map((n) => ({
-      ...n,
-      createdAt: n.createdAt.toISOString(),
-    }));
-
-    return NextResponse.json(serialized);
+    return NextResponse.json(notifications || []);
   } catch (error) {
     console.error("Notifications fetch error:", error);
     return NextResponse.json(
@@ -44,9 +42,10 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!token) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -55,10 +54,10 @@ export async function PATCH(req: NextRequest) {
 
     const { id } = await req.json();
 
-    await prisma.notification.update({
-      where: { id },
-      data: { read: true },
-    });
+    await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', id);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -72,24 +71,21 @@ export async function PATCH(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!token) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    await prisma.notification.updateMany({
-      where: {
-        userId: token.id as string,
-        read: false,
-      },
-      data: {
-        read: true,
-      },
-    });
+    await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', user.id)
+      .eq('read', false);
 
     return NextResponse.json({ success: true });
   } catch (error) {

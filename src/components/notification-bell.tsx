@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "./session-provider";
 
 type Notification = {
   id: string;
@@ -14,30 +14,25 @@ type Notification = {
 };
 
 export function NotificationBell() {
-  const { data: session } = useSession();
+  const { profile } = useSession();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchNotifications = async () => {
-    if (!session?.user?.id) {
-      console.log("NotificationBell: No session, skipping fetch");
+    if (!profile?.id) {
       return;
     }
     
     try {
-      console.log("NotificationBell: Fetching notifications for user", session.user.id);
       const res = await fetch("/api/notifications", {
         cache: "no-store",
       });
       
       if (res.ok) {
         const data = await res.json();
-        console.log("NotificationBell: Received", data.length, "notifications");
         setNotifications(data);
-      } else {
-        console.error("NotificationBell: Fetch failed with status", res.status);
       }
     } catch (error) {
       console.error("NotificationBell: Fetch error:", error);
@@ -47,23 +42,20 @@ export function NotificationBell() {
   };
 
   useEffect(() => {
-    if (session?.user?.id) {
-      console.log("NotificationBell: Session detected, starting poll");
+    if (profile?.id) {
       fetchNotifications();
       
       intervalRef.current = setInterval(() => {
-        console.log("NotificationBell: Polling...");
         fetchNotifications();
-      }, 5000); // Poll every 5 seconds
+      }, 5000);
     }
     
     return () => {
       if (intervalRef.current) {
-        console.log("NotificationBell: Clearing interval");
         clearInterval(intervalRef.current);
       }
     };
-  }, [session?.user?.id]);
+  }, [profile?.id]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -93,7 +85,7 @@ export function NotificationBell() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  if (!session) return null;
+  if (!profile) return null;
 
   return (
     <div className="relative">
@@ -133,7 +125,7 @@ export function NotificationBell() {
                 className="text-[10px] text-zinc-600 hover:text-zinc-900 sm:text-xs"
                 title="Refresh"
               >
-                ↻ Refresh
+                Refresh
               </button>
               {unreadCount > 0 && (
                 <button

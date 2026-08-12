@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { createClient } from "@/lib/supabase-client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,23 +18,25 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const result = await signIn("credentials", {
+      const supabase = createClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
-        redirect: false,
       });
 
-      if (result?.error) {
+      if (authError) {
         setError("Invalid email or password");
-      } else {
-        // Fetch session to determine role
-        const sessionRes = await fetch("/api/auth/session");
-        const session = await sessionRes.json();
-        
-        if (session?.user?.role === "admin") {
-          window.location.href = "/admin";
+      } else if (data.user) {
+        const { data: profile } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", data.user.id)
+          .single();
+
+        if (profile?.role === "admin") {
+          router.push("/admin");
         } else {
-          window.location.href = "/catalog";
+          router.push("/catalog");
         }
       }
     } catch {

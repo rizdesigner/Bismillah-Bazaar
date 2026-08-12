@@ -1,6 +1,7 @@
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/password";
 import {
   validatePasswordResetToken,
   consumePasswordResetToken,
@@ -44,19 +45,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const supabase = await createClient();
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-    if (!user) {
+    if (!profile) {
       return NextResponse.json(
         { error: "Reset link is invalid or expired" },
         { status: 400 }
       );
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { password: await hashPassword(password) },
-    });
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      userId,
+      { password }
+    );
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: "Failed to update password" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

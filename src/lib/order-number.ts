@@ -1,17 +1,21 @@
-import { prisma } from "@/lib/prisma";
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
 
 export async function generateOrderNumber(): Promise<string> {
-  // Find the latest order and extract the number
-  const latestOrder = await prisma.order.findFirst({
-    orderBy: { createdAt: "desc" },
-    select: { orderNumber: true },
-  });
+  const supabase = await createClient();
 
-  let nextNumber = 1001; // Starting number
+  const { data: latestOrder } = await supabase
+    .from('orders')
+    .select('order_number')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
 
-  if (latestOrder?.orderNumber) {
-    // Extract the numeric part from the order number (e.g., "ORD-1001" -> 1001)
-    const match = latestOrder.orderNumber.match(/ORD-(\d+)/);
+  let nextNumber = 1001;
+
+  if (latestOrder?.order_number) {
+    const match = latestOrder.order_number.match(/ORD-(\d+)/);
     if (match) {
       nextNumber = parseInt(match[1], 10) + 1;
     }

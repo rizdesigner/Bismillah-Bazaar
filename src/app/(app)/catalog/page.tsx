@@ -1,56 +1,58 @@
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase-server";
 import { CatalogTabs } from "@/components/catalog-tabs";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
 export const metadata = { title: "Catalog" };
 
 export const dynamic = "force-dynamic";
 
 export default async function CatalogPage() {
-  const session = await getServerSession(authOptions);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const inventory = await prisma.inventory.findMany({
-    where: {
-      inStock: true,
-    },
-    orderBy: {
-      itemName: "asc",
-    },
-  });
+  const { data: inventory } = await supabase
+    .from("inventory")
+    .select("*")
+    .eq("in_stock", true)
+    .order("item_name");
 
   let clientOverrides: any[] = [];
-  if (session?.user?.id) {
-    clientOverrides = await prisma.clientProductOverride.findMany({
-      where: {
-        userId: session.user.id,
-      },
-    });
+  if (user) {
+    const { data } = await supabase
+      .from("client_product_overrides")
+      .select("*")
+      .eq("user_id", user.id);
+    clientOverrides = data ?? [];
   }
 
   const overridesMap = new Map(
-    clientOverrides.map((o) => [o.itemId, o])
+    clientOverrides.map((o) => [o.item_id, o])
   );
 
-  const serializedInventory = inventory
+  const serializedInventory = (inventory ?? [])
     .filter((item) => {
       const override = overridesMap.get(item.id);
-      if (override && override.isAvailable === false) {
+      if (override && override.is_available === false) {
         return false;
       }
       return true;
     })
     .map((item) => {
       const override = overridesMap.get(item.id);
-      const finalPrice = override?.customPriceKg
-        ? Number(override.customPriceKg)
-        : Number(item.basePriceKg);
+      const finalPrice = override?.custom_price_kg
+        ? Number(override.custom_price_kg)
+        : Number(item.base_price_kg);
 
       return {
         ...item,
-        basePriceKg: Number(item.basePriceKg),
+        id: item.id,
+        itemName: item.item_name,
+        category: item.category,
+        unit: item.unit,
+        basePriceKg: Number(item.base_price_kg),
         priceKg: finalPrice,
-        hasCustomPrice: !!override?.customPriceKg,
+        hasCustomPrice: !!override?.custom_price_kg,
+        inStock: item.in_stock,
+        imageUrl: item.image_url,
       };
     });
 

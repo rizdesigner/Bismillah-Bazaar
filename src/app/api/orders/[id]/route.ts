@@ -1,15 +1,17 @@
-import { getToken } from "next-auth/jwt";
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!token) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -18,13 +20,11 @@ export async function PATCH(
 
     const { id } = await params;
 
-    const order = await prisma.order.findUnique({
-      where: { id },
-      include: {
-        items: true,
-        user: true,
-      },
-    });
+    const { data: order } = await supabase
+      .from('orders')
+      .select('*, items:order_items(*), user:users(*)')
+      .eq('id', id)
+      .single();
 
     if (!order) {
       return NextResponse.json(
@@ -33,7 +33,7 @@ export async function PATCH(
       );
     }
 
-    if (order.userId !== token.id) {
+    if (order.user_id !== user.id) {
       return NextResponse.json(
         { error: "Forbidden" },
         { status: 403 }
@@ -71,33 +71,34 @@ export async function PATCH(
 
     const itemIds = normalized.map((i) => i.itemId);
 
-    const inventoryItems = await prisma.inventory.findMany({
-      where: { id: { in: itemIds } },
-    });
+    const { data: inventoryItems } = await supabase
+      .from('inventory')
+      .select('*')
+      .in('id', itemIds);
 
-    const inventoryById = new Map(inventoryItems.map((i) => [i.id, i]));
+    const inventoryById = new Map((inventoryItems || []).map((i: any) => [i.id, i]));
 
     for (const item of normalized) {
       const inventory = inventoryById.get(item.itemId);
-      if (!inventory || !inventory.inStock) {
+      if (!inventory || !inventory.in_stock) {
         return NextResponse.json(
-          { error: `Item not available: ${inventory?.itemName ?? item.itemId}` },
+          { error: `Item not available: ${inventory?.item_name ?? item.itemId}` },
           { status: 400 }
         );
       }
     }
 
-    const existingItemsById = new Map(order.items.map((i) => [i.id, i]));
-    const existingItemsByItemId = new Map(order.items.map((i) => [i.itemId, i]));
+    const existingItemsById = new Map<string, any>(order.items.map((i: any) => [i.id, i]));
+    const existingItemsByItemId = new Map<string, any>(order.items.map((i: any) => [i.item_id, i]));
     const usedExistingIds = new Set<string>();
 
     let originalTotal = 0;
 
     for (const item of normalized) {
       const inventory = inventoryById.get(item.itemId)!;
-      originalTotal += Number(inventory.basePriceKg) * item.requestedKg;
+      originalTotal += Number(inventory.base_price_kg) * item.requestedKg;
 
-      let existing: (typeof order.items)[number] | undefined;
+      let existing: any | undefined;
 
       if (item.orderItemId) {
         existing = existingItemsById.get(item.orderItemId);
@@ -110,54 +111,56 @@ export async function PATCH(
 
       if (existing) {
         usedExistingIds.add(existing.id);
-        await prisma.orderItem.update({
-          where: { id: existing.id },
-          data: { requestedKg: item.requestedKg, fulfilledKg: null },
-        });
+        await supabase
+          .from('order_items')
+          .update({ requested_kg: item.requestedKg, fulfilled_kg: null })
+          .eq('id', existing.id);
       } else {
-        await prisma.orderItem.create({
-          data: {
-            orderId: id,
-            itemId: item.itemId,
-            requestedKg: item.requestedKg,
-          },
-        });
+        await supabase
+          .from('order_items')
+          .insert({
+            order_id: id,
+            item_id: item.itemId,
+            requested_kg: item.requestedKg,
+          });
       }
     }
 
-    const itemsToDelete = order.items.filter((i) => !usedExistingIds.has(i.id));
+    const itemsToDelete = order.items.filter((i: any) => !usedExistingIds.has(i.id));
 
     if (itemsToDelete.length > 0) {
-      await prisma.orderItem.deleteMany({
-        where: { id: { in: itemsToDelete.map((i) => i.id) } },
-      });
+      await supabase
+        .from('order_items')
+        .delete()
+        .in('id', itemsToDelete.map((i: any) => i.id));
     }
 
-    await prisma.order.update({
-      where: { id },
-      data: {
-        originalTotal,
-        finalTotal: null,
-        adminEta: null,
+    await supabase
+      .from('orders')
+      .update({
+        original_total: originalTotal,
+        final_total: null,
+        admin_eta: null,
         status: "pending",
-        deliveredAt: null,
-      },
-    });
+        delivered_at: null,
+      })
+      .eq('id', id);
 
-    const admins = await prisma.user.findMany({
-      where: { role: "admin" },
-    });
+    const { data: admins } = await supabase
+      .from('users')
+      .select('*')
+      .eq('role', 'admin');
 
-    for (const admin of admins) {
-      await prisma.notification.create({
-        data: {
-          userId: admin.id,
-          orderId: id,
+    for (const admin of (admins || [])) {
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: admin.id,
+          order_id: id,
           type: "order_edited",
           title: "Order Edited by Restaurant",
-          message: `${order.user.restaurantName || order.user.email} updated order #${id.slice(0, 8)}. Please re-review the requested quantities.`,
-        },
-      });
+          message: `${order.user.restaurant_name || order.user.email} updated order #${id.slice(0, 8)}. Please re-review the requested quantities.`,
+        });
     }
 
     return NextResponse.json({ success: true });

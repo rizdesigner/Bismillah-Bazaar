@@ -1,13 +1,16 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "./session-provider";
+import { createClient } from "@/lib/supabase-client";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { NotificationBell } from "./notification-bell";
 import { InstallButton } from "./install-button";
 
 export function AppHeader() {
-  const { data: session } = useSession();
+  const router = useRouter();
+  const { profile } = useSession();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -22,10 +25,13 @@ export function AppHeader() {
     return () => document.removeEventListener("mousedown", onClick);
   }, [showMenu]);
 
-  const user = session?.user as
-    | { name?: string; email?: string; restaurantName?: string | null }
-    | undefined;
-  const displayName = user?.restaurantName || user?.name || user?.email;
+  const displayName = profile?.restaurant_name || profile?.email;
+
+  const handleSignOut = async (redirectUrl: string) => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push(redirectUrl);
+  };
 
   return (
     <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
@@ -63,9 +69,9 @@ export function AppHeader() {
                   <p className="truncate text-sm font-semibold text-zinc-900">
                     {displayName || "User"}
                   </p>
-                  {user?.email && (
+                  {profile?.email && (
                     <p className="mt-0.5 truncate text-xs text-zinc-500">
-                      {user.email}
+                      {profile.email}
                     </p>
                   )}
                 </div>
@@ -93,9 +99,7 @@ export function AppHeader() {
                   </Link>
 
                   <button
-                    onClick={() =>
-                      signOut({ callbackUrl: "/login" })
-                    }
+                    onClick={() => handleSignOut("/login")}
                     className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
                   >
                     <svg
@@ -116,9 +120,7 @@ export function AppHeader() {
                   </button>
 
                   <button
-                    onClick={() =>
-                      signOut({ callbackUrl: "/" })
-                    }
+                    onClick={() => handleSignOut("/")}
                     className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
                   >
                     <svg

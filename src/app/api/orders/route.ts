@@ -1,17 +1,25 @@
-import { getToken } from "next-auth/jwt";
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { generateOrderNumber } from "@/lib/order-number";
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!token) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (token.status !== "active") {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile || profile.status !== "active") {
       return NextResponse.json(
         { error: "Account not approved" },
         { status: 403 }
@@ -27,43 +35,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userId = token.id as string;
+    const userId = user.id;
 
-    const clientOverrides = await prisma.clientProductOverride.findMany({
-      where: { userId },
-    });
+    const { data: clientOverrides } = await supabase
+      .from('client_product_overrides')
+      .select('*')
+      .eq('user_id', userId);
 
     const overridesMap = new Map(
-      clientOverrides.map((o) => [o.itemId, o])
+      (clientOverrides || []).map((o: any) => [o.item_id, o])
     );
 
     let originalTotal = 0;
     const validatedItems: { itemId: string; requestedKg: number; basePriceKg: number }[] = [];
 
     for (const item of items) {
-      const inventory = await prisma.inventory.findUnique({
-        where: { id: item.itemId },
-      });
+      const { data: inventory } = await supabase
+        .from('inventory')
+        .select('*')
+        .eq('id', item.itemId)
+        .single();
 
-      if (!inventory || !inventory.inStock) {
+      if (!inventory || !inventory.in_stock) {
         return NextResponse.json(
-          { error: `Item not available: ${inventory?.itemName ?? item.itemId}` },
+          { error: `Item not available: ${inventory?.item_name ?? item.itemId}` },
           { status: 400 }
         );
       }
 
       const override = overridesMap.get(item.itemId);
-      
-      if (override && override.isAvailable === false) {
+
+      if (override && override.is_available === false) {
         return NextResponse.json(
-          { error: `Item not available for your account: ${inventory.itemName}` },
+          { error: `Item not available for your account: ${inventory.item_name}` },
           { status: 400 }
         );
       }
 
-      const price = override?.customPriceKg
-        ? Number(override.customPriceKg)
-        : Number(inventory.basePriceKg);
+      const price = override?.custom_price_kg
+        ? Number(override.custom_price_kg)
+        : Number(inventory.base_price_kg);
 
       originalTotal += price * item.requestedKg;
       validatedItems.push({
@@ -75,24 +86,34 @@ export async function POST(req: NextRequest) {
 
     const orderNumber = await generateOrderNumber();
     const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 7); // Net 7 payment terms
+    dueDate.setDate(dueDate.getDate() + 7);
 
-    const order = await prisma.order.create({
-      data: {
-        userId,
-        orderNumber,
-        originalTotal,
-        requestedEta: requestedEta ? new Date(requestedEta) : null,
-        dueDate,
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: userId,
+        order_number: orderNumber,
+        original_total: originalTotal,
+        requested_eta: requestedEta ? new Date(requestedEta).toISOString() : null,
+        due_date: dueDate.toISOString(),
         status: "pending",
-        items: {
-          create: validatedItems.map((item) => ({
-            itemId: item.itemId,
-            requestedKg: item.requestedKg,
-          })),
-        },
-      },
-    });
+      })
+      .select()
+      .single();
+
+    if (orderError) throw orderError;
+
+    const orderItems = validatedItems.map((item) => ({
+      order_id: order.id,
+      item_id: item.itemId,
+      requested_kg: item.requestedKg,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems);
+
+    if (itemsError) throw itemsError;
 
     return NextResponse.json({ orderId: order.id });
   } catch (error) {

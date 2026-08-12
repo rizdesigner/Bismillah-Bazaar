@@ -1,11 +1,19 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
-import { prisma } from "@/lib/prisma";
+import { createClient } from '@/lib/supabase-server';
 
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
-    if (!token || token.role !== "admin") {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -16,32 +24,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
-    const overrides = await prisma.clientProductOverride.findMany({
-      where: { userId },
-      include: {
-        item: {
-          select: {
-            id: true,
-            itemName: true,
-            category: true,
-            basePriceKg: true,
-            inStock: true,
-          },
-        },
-      },
-      orderBy: {
-        item: {
-          itemName: "asc",
-        },
-      },
-    });
+    const { data: overrides, error } = await supabase
+      .from('client_product_overrides')
+      .select('*, item:inventory(id, item_name, category, base_price_kg, in_stock)')
+      .eq('user_id', userId)
+      .order('item(item_name)', { ascending: true });
 
-    const serialized = overrides.map((o) => ({
+    if (error) throw error;
+
+    const serialized = (overrides || []).map((o: any) => ({
       ...o,
-      customPriceKg: o.customPriceKg ? Number(o.customPriceKg) : null,
+      customPriceKg: o.custom_price_kg ? Number(o.custom_price_kg) : null,
       item: {
         ...o.item,
-        basePriceKg: Number(o.item.basePriceKg),
+        basePriceKg: Number(o.item.base_price_kg),
       },
     }));
 
@@ -54,8 +50,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
-    if (!token || token.role !== "admin") {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -66,40 +69,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "userId and itemId are required" }, { status: 400 });
     }
 
-    const override = await prisma.clientProductOverride.upsert({
-      where: {
-        userId_itemId: { userId, itemId },
-      },
-      update: {
-        customPriceKg: customPriceKg !== null && customPriceKg !== undefined ? customPriceKg : null,
-        isAvailable: isAvailable !== undefined ? isAvailable : true,
-      },
-      create: {
-        userId,
-        itemId,
-        customPriceKg: customPriceKg !== null && customPriceKg !== undefined ? customPriceKg : null,
-        isAvailable: isAvailable !== undefined ? isAvailable : true,
-      },
-      include: {
-        item: {
-          select: {
-            id: true,
-            itemName: true,
-            category: true,
-            basePriceKg: true,
-            inStock: true,
-          },
-        },
-      },
-    });
+    const { data: existing } = await supabase
+      .from('client_product_overrides')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('item_id', itemId)
+      .maybeSingle();
+
+    const payload = {
+      user_id: userId,
+      item_id: itemId,
+      custom_price_kg: customPriceKg !== null && customPriceKg !== undefined ? customPriceKg : null,
+      is_available: isAvailable !== undefined ? isAvailable : true,
+    };
+
+    let result;
+    if (existing) {
+      const { data } = await supabase
+        .from('client_product_overrides')
+        .update(payload)
+        .eq('id', existing.id)
+        .select('*, item:inventory(id, item_name, category, base_price_kg, in_stock)')
+        .single();
+      result = data;
+    } else {
+      const { data } = await supabase
+        .from('client_product_overrides')
+        .insert(payload)
+        .select('*, item:inventory(id, item_name, category, base_price_kg, in_stock)')
+        .single();
+      result = data;
+    }
 
     const serialized = {
-      ...override,
-      customPriceKg: override.customPriceKg ? Number(override.customPriceKg) : null,
-      item: {
-        ...override.item,
-        basePriceKg: Number(override.item.basePriceKg),
-      },
+      ...result,
+      customPriceKg: result?.custom_price_kg ? Number(result.custom_price_kg) : null,
+      item: result?.item ? {
+        ...result.item,
+        basePriceKg: Number(result.item.base_price_kg),
+      } : null,
     };
 
     return NextResponse.json(serialized);
@@ -111,8 +119,15 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
-    if (!token || token.role !== "admin") {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -123,9 +138,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    await prisma.clientProductOverride.delete({
-      where: { id },
-    });
+    const { error } = await supabase.from('client_product_overrides').delete().eq('id', id);
+
+    if (error) throw error;
 
     return NextResponse.json({ success: true });
   } catch (error) {

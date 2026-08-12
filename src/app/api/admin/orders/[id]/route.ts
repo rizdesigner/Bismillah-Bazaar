@@ -1,6 +1,7 @@
-import { getToken } from "next-auth/jwt";
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { sendDeliveryReceipt } from "@/lib/email";
 
 export async function PATCH(
@@ -8,9 +9,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!token || token.role !== "admin") {
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -20,17 +30,13 @@ export async function PATCH(
     const { id } = await params;
     const { items, finalTotal, adminEta, status, paymentStatus, paymentMethod } = await req.json();
 
-    const order = await prisma.order.findUnique({
-      where: { id },
-      include: {
-        user: true,
-        items: {
-          include: { item: true },
-        },
-      },
-    });
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('*, items:order_items(*, item:inventory(*)), user:users(*)')
+      .eq('id', id)
+      .single();
 
-    if (!order) {
+    if (orderError || !order) {
       return NextResponse.json(
         { error: "Order not found" },
         { status: 404 }
@@ -41,24 +47,21 @@ export async function PATCH(
 
     if (items && Array.isArray(items)) {
       for (const item of items) {
-        const orderItem = order.items.find((oi) => oi.id === item.id);
-        if (orderItem && Number(orderItem.fulfilledKg ?? orderItem.requestedKg) !== item.fulfilledKg) {
-          changes.push(`${orderItem.item.itemName}: ${Number(orderItem.requestedKg)}kg → ${item.fulfilledKg}kg`);
+        const orderItem = order.items.find((oi: any) => oi.id === item.id);
+        if (orderItem && Number(orderItem.fulfilled_kg ?? orderItem.requested_kg) !== item.fulfilledKg) {
+          changes.push(`${orderItem.item.item_name}: ${Number(orderItem.requested_kg)}kg → ${item.fulfilledKg}kg`);
         }
-        await prisma.orderItem.update({
-          where: { id: item.id },
-          data: { fulfilledKg: item.fulfilledKg },
-        });
+        await supabase.from('order_items').update({ fulfilled_kg: item.fulfilledKg }).eq('id', item.id);
       }
     }
 
-    if (finalTotal !== undefined && Number(order.finalTotal ?? order.originalTotal) !== finalTotal) {
-      changes.push(`Price: $${Number(order.originalTotal).toFixed(2)} → $${finalTotal.toFixed(2)}`);
+    if (finalTotal !== undefined && Number(order.final_total ?? order.original_total) !== finalTotal) {
+      changes.push(`Price: $${Number(order.original_total).toFixed(2)} → $${finalTotal.toFixed(2)}`);
     }
 
     if (adminEta) {
       const newEta = new Date(adminEta);
-      if (!order.adminEta || newEta.getTime() !== order.adminEta.getTime()) {
+      if (!order.admin_eta || newEta.getTime() !== new Date(order.admin_eta).getTime()) {
         changes.push(`Admin ETA: ${newEta.toLocaleDateString()}`);
       }
     }
@@ -67,52 +70,52 @@ export async function PATCH(
       changes.push(`Status: ${order.status} → ${status}`);
     }
 
-    if (paymentStatus && paymentStatus !== order.paymentStatus) {
-      changes.push(`Payment: ${order.paymentStatus} → ${paymentStatus}`);
+    if (paymentStatus && paymentStatus !== order.payment_status) {
+      changes.push(`Payment: ${order.payment_status} → ${paymentStatus}`);
     }
 
-    const updatedOrder = await prisma.order.update({
-      where: { id },
-      data: {
-        finalTotal: finalTotal !== undefined ? finalTotal : undefined,
-        adminEta: adminEta ? new Date(adminEta) : null,
-        status: status || undefined,
-        paymentStatus: paymentStatus || undefined,
-        paymentMethod: paymentMethod || undefined,
-        paidAt: paymentStatus === "paid" ? new Date() : undefined,
-        deliveredAt:
-          status === "delivered"
-            ? order.deliveredAt ?? new Date()
-            : status && status !== "delivered"
-            ? null
-            : undefined,
-      },
-      include: {
-        items: {
-          include: { item: true },
-        },
-        user: true,
-      },
-    });
+    const updateData: Record<string, any> = {};
+    if (finalTotal !== undefined) updateData.final_total = finalTotal;
+    if (adminEta) updateData.admin_eta = new Date(adminEta).toISOString();
+    else updateData.admin_eta = null;
+    if (status) updateData.status = status;
+    if (paymentStatus) updateData.payment_status = paymentStatus;
+    if (paymentMethod) updateData.payment_method = paymentMethod;
+    if (paymentStatus === "paid") updateData.paid_at = new Date().toISOString();
+    if (status === "delivered") {
+      updateData.delivered_at = order.delivered_at ?? new Date().toISOString();
+    } else if (status && status !== "delivered") {
+      updateData.delivered_at = null;
+    }
+
+    const { data: updatedOrder } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', id)
+      .select('*, items:order_items(*, item:inventory(*)), user:users(*)')
+      .single();
 
     const messageParts = ["Your order has been updated by the admin."];
-    
+
     if (changes.length > 0) {
       messageParts.push("Changes:", ...changes.map((c) => `• ${c}`));
     }
 
-    await prisma.notification.create({
-      data: {
-        userId: order.userId,
-        orderId: id,
-        type: "order_modified",
-        title: "Order Updated",
-        message: messageParts.join("\n"),
-      },
+    await supabase.from('notifications').insert({
+      user_id: order.user_id,
+      order_id: id,
+      type: "order_modified",
+      title: "Order Updated",
+      message: messageParts.join("\n"),
     });
 
-    if (status === "delivered" && order.user.email) {
-      await sendDeliveryReceipt(order.user.email, updatedOrder);
+    if (status === "delivered" && order.user?.email) {
+      await sendDeliveryReceipt(
+        order.user.email,
+        updatedOrder.order_number,
+        updatedOrder,
+        updatedOrder.items
+      );
     }
 
     return NextResponse.json({ success: true });

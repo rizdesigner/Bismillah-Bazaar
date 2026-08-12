@@ -1,6 +1,4 @@
-import { getServerSession } from "next-auth";
-import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
+import { createClient } from "@/lib/supabase-server";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { SmtpSettingsForm } from "@/components/admin/smtp-settings-form";
 
@@ -9,15 +7,18 @@ export const metadata = { title: "Admin Settings" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
-  const session = await getServerSession(authOptions);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return null;
   }
 
-  const admin = await prisma.user.findUnique({
-    where: { id: session.user.id },
-  });
+  const { data: admin } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", user.id)
+    .single();
 
   return (
     <div className="mx-auto max-w-2xl">

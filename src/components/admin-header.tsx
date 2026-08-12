@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "./session-provider";
+import { createClient } from "@/lib/supabase-client";
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 
 type Notification = {
@@ -15,13 +17,14 @@ type Notification = {
 };
 
 export function AdminHeader() {
-  const { data: session } = useSession();
+  const router = useRouter();
+  const { profile } = useSession();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const lastIdsRef = useRef<Set<string>>(new Set());
 
   const fetchNotifications = async () => {
-    if (!session?.user?.id) return;
+    if (!profile?.id) return;
 
     try {
       const res = await fetch("/api/notifications", {
@@ -46,12 +49,12 @@ export function AdminHeader() {
   };
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (profile?.id) {
       fetchNotifications();
       const interval = setInterval(fetchNotifications, 3000);
       return () => clearInterval(interval);
     }
-  }, [session?.user?.id]);
+  }, [profile?.id]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -66,6 +69,12 @@ export function AdminHeader() {
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
     }
+  };
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -88,7 +97,6 @@ export function AdminHeader() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Notification Bell */}
           <div className="relative">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
@@ -124,7 +132,7 @@ export function AdminHeader() {
                     onClick={fetchNotifications}
                     className="text-[10px] text-zinc-600 hover:text-zinc-900 sm:text-xs"
                   >
-                    ↻ Refresh
+                    Refresh
                   </button>
                 </div>
                 <div className="max-h-80 overflow-y-auto sm:max-h-96">
@@ -171,7 +179,7 @@ export function AdminHeader() {
 
           <nav className="flex items-center gap-2 text-xs sm:gap-4 sm:text-sm">
             <span className="text-zinc-600">
-              {session?.user?.email}
+              {profile?.email}
             </span>
             <Link
               href="/admin/settings"
@@ -180,7 +188,7 @@ export function AdminHeader() {
               Settings
             </Link>
             <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={handleSignOut}
               className="text-zinc-600 hover:text-emerald-600"
             >
               Logout

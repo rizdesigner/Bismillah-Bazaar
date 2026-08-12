@@ -1,5 +1,7 @@
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { createPasswordResetToken } from "@/lib/reset-token";
 import { sendPasswordResetEmail } from "@/lib/email";
 
@@ -15,15 +17,17 @@ export async function POST(req: NextRequest) {
     }
 
     const normalized = email.trim().toLowerCase();
-    const user = await prisma.user.findUnique({
-      where: { email: normalized },
-    });
+    const supabase = await createClient();
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', normalized)
+      .single();
 
-    // Always respond generically to prevent account enumeration.
-    if (user && user.status === "active") {
-      const token = await createPasswordResetToken(user.id);
+    if (profile && profile.status === "active") {
+      const token = await createPasswordResetToken(profile.id);
       const resetUrl = `${req.nextUrl.origin}/reset-password?token=${token}`;
-      await sendPasswordResetEmail(user.email, resetUrl);
+      await sendPasswordResetEmail(profile.email, resetUrl);
     }
 
     return NextResponse.json({ success: true });

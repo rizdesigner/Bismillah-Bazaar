@@ -1,7 +1,5 @@
-import { getServerSession } from "next-auth";
+import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
 import { ChangePasswordForm } from "@/components/change-password-form";
 
 export const metadata = { title: "Account" };
@@ -9,17 +7,20 @@ export const metadata = { title: "Account" };
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
-  const session = await getServerSession(authOptions);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/login");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-  });
+  const { data: profile } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", user.id)
+    .single();
 
-  if (!user) {
+  if (!profile) {
     redirect("/");
   }
 
@@ -41,21 +42,21 @@ export default async function AccountPage() {
                 Restaurant Name
               </p>
               <p className="text-sm font-medium text-zinc-900">
-                {user.restaurantName || "—"}
+                {profile.restaurant_name || "—"}
               </p>
             </div>
             <div>
               <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 sm:text-xs">
                 Email
               </p>
-              <p className="text-sm font-medium text-zinc-900">{user.email}</p>
+              <p className="text-sm font-medium text-zinc-900">{profile.email}</p>
             </div>
             <div>
               <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 sm:text-xs">
                 Phone
               </p>
               <p className="text-sm font-medium text-zinc-900">
-                {user.phone || "—"}
+                {profile.phone || "—"}
               </p>
             </div>
             <div>
@@ -63,7 +64,7 @@ export default async function AccountPage() {
                 Location
               </p>
               <p className="text-sm font-medium text-zinc-900">
-                {user.location || "—"}
+                {profile.location || "—"}
               </p>
             </div>
           </div>

@@ -1,27 +1,38 @@
-import { getToken } from "next-auth/jwt";
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!token || token.role !== "admin") {
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { itemName, category, basePriceKg, imageUrl, inStock } =
       await req.json();
 
-    const item = await prisma.inventory.create({
-      data: {
-        itemName,
+    const { data: item, error } = await supabase
+      .from('inventory')
+      .insert({
+        item_name: itemName,
         category,
-        basePriceKg,
-        imageUrl: imageUrl || null,
-        inStock: inStock ?? true,
-      },
-    });
+        base_price_kg: basePriceKg,
+        image_url: imageUrl || null,
+        in_stock: inStock ?? true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return NextResponse.json(item);
   } catch (error) {

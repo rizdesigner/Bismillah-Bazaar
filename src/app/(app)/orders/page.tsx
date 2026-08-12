@@ -1,62 +1,74 @@
-import { getServerSession } from "next-auth";
-import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
+import { createClient } from "@/lib/supabase-server";
 import { OrderHistory } from "@/components/order-history";
 
 export const metadata = { title: "Orders" };
 
 export default async function OrdersPage() {
-  const session = await getServerSession(authOptions);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return null;
   }
 
-  const [orders, inventory] = await Promise.all([
-    prisma.order.findMany({
-      where: {
-        userId: session.user.id,
-      },
-      include: {
-        items: {
-          include: {
-            item: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    }),
-    prisma.inventory.findMany({
-      orderBy: { category: "asc" },
-    }),
+  const [ordersRes, inventoryRes] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("*, order_items(*, inventory(*))")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("inventory")
+      .select("*")
+      .order("category"),
   ]);
 
+  const orders = ordersRes.data ?? [];
+  const inventory = inventoryRes.data ?? [];
+
   const serializedOrders = orders.map((order) => ({
-    ...order,
-    originalTotal: Number(order.originalTotal),
-    finalTotal: order.finalTotal ? Number(order.finalTotal) : null,
-    createdAt: order.createdAt.toISOString(),
-    requestedEta: order.requestedEta ? order.requestedEta.toISOString() : null,
-    adminEta: order.adminEta ? order.adminEta.toISOString() : null,
-    deliveredAt: order.deliveredAt ? order.deliveredAt.toISOString() : null,
-    dueDate: order.dueDate ? order.dueDate.toISOString() : null,
-    paidAt: order.paidAt ? order.paidAt.toISOString() : null,
-    items: order.items.map((item) => ({
-      ...item,
-      requestedKg: Number(item.requestedKg),
-      fulfilledKg: item.fulfilledKg ? Number(item.fulfilledKg) : null,
+    id: order.id,
+    userId: order.user_id,
+    orderNumber: order.order_number,
+    status: order.status,
+    notes: order.notes,
+    originalTotal: Number(order.original_total),
+    finalTotal: order.final_total ? Number(order.final_total) : null,
+    paymentStatus: order.payment_status,
+    paymentMethod: order.payment_method,
+    createdAt: order.created_at,
+    requestedEta: order.requested_eta ?? null,
+    adminEta: order.admin_eta ?? null,
+    deliveredAt: order.delivered_at ?? null,
+    dueDate: order.due_date ?? null,
+    paidAt: order.paid_at ?? null,
+    items: (order.order_items ?? []).map((oi: any) => ({
+      id: oi.id,
+      orderId: oi.order_id,
+      itemId: oi.item_id,
+      requestedKg: Number(oi.requested_kg),
+      fulfilledKg: oi.fulfilled_kg ? Number(oi.fulfilled_kg) : null,
+      notes: oi.notes,
       item: {
-        ...item.item,
-        basePriceKg: Number(item.item.basePriceKg),
+        id: oi.inventory.id,
+        itemName: oi.inventory.item_name,
+        category: oi.inventory.category,
+        unit: oi.inventory.unit,
+        basePriceKg: Number(oi.inventory.base_price_kg),
+        inStock: oi.inventory.in_stock,
+        imageUrl: oi.inventory.image_url,
       },
     })),
   }));
 
   const serializedInventory = inventory.map((item) => ({
-    ...item,
-    basePriceKg: Number(item.basePriceKg),
+    id: item.id,
+    itemName: item.item_name,
+    category: item.category,
+    unit: item.unit,
+    basePriceKg: Number(item.base_price_kg),
+    inStock: item.in_stock,
+    imageUrl: item.image_url,
   }));
 
   return (

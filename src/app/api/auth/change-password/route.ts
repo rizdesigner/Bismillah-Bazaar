@@ -1,13 +1,14 @@
-import { getToken } from "next-auth/jwt";
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { hashPassword, verifyPassword } from "@/lib/password";
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (!token) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -30,37 +31,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: token.id as string },
+    const res = await fetch(`${process.env.SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.SUPABASE_ANON_KEY!,
+      },
+      body: JSON.stringify({ email: user.email, password: currentPassword }),
     });
 
-    if (!user || !user.password) {
+    if (!res.ok) {
       return NextResponse.json(
         { error: "Current password is incorrect" },
         { status: 400 }
       );
     }
 
-    const isValid = await verifyPassword(currentPassword, user.password);
-
-    if (!isValid) {
-      return NextResponse.json(
-        { error: "Current password is incorrect" },
-        { status: 400 }
-      );
-    }
-
-    if (await verifyPassword(newPassword, user.password)) {
+    if (newPassword === currentPassword) {
       return NextResponse.json(
         { error: "New password must be different from the current password" },
         { status: 400 }
       );
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { password: await hashPassword(newPassword) },
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
     });
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: "Failed to update password" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,7 +1,9 @@
-import crypto from "crypto";
-import { prisma } from "@/lib/prisma";
+export const runtime = 'edge';
 
-export const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+import crypto from "crypto";
+import { createClient } from '@/lib/supabase-server';
+
+export const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 export function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -14,19 +16,22 @@ export function generateResetToken(): string {
 export async function createPasswordResetToken(
   userId: string
 ): Promise<string> {
-  // Invalidate any previous unused tokens for this user
-  await prisma.passwordResetToken.deleteMany({
-    where: { userId, usedAt: null },
-  });
+  const supabase = await createClient();
+
+  await supabase
+    .from('password_reset_tokens')
+    .delete()
+    .eq('user_id', userId)
+    .is('used_at', null);
 
   const token = generateResetToken();
-  await prisma.passwordResetToken.create({
-    data: {
-      userId,
-      tokenHash: hashToken(token),
-      expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
-    },
-  });
+  await supabase
+    .from('password_reset_tokens')
+    .insert({
+      user_id: userId,
+      token_hash: hashToken(token),
+      expires_at: new Date(Date.now() + RESET_TOKEN_TTL_MS).toISOString(),
+    });
 
   return token;
 }
@@ -34,30 +39,38 @@ export async function createPasswordResetToken(
 export async function validatePasswordResetToken(
   token: string
 ): Promise<boolean> {
-  const record = await prisma.passwordResetToken.findUnique({
-    where: { tokenHash: hashToken(token) },
-  });
+  const supabase = await createClient();
+
+  const { data: record } = await supabase
+    .from('password_reset_tokens')
+    .select('*')
+    .eq('token_hash', hashToken(token))
+    .single();
 
   return Boolean(
-    record && !record.usedAt && record.expiresAt.getTime() >= Date.now()
+    record && !record.used_at && new Date(record.expires_at).getTime() >= Date.now()
   );
 }
 
 export async function consumePasswordResetToken(
   token: string
 ): Promise<string | null> {
-  const record = await prisma.passwordResetToken.findUnique({
-    where: { tokenHash: hashToken(token) },
-  });
+  const supabase = await createClient();
 
-  if (!record || record.usedAt || record.expiresAt.getTime() < Date.now()) {
+  const { data: record } = await supabase
+    .from('password_reset_tokens')
+    .select('*')
+    .eq('token_hash', hashToken(token))
+    .single();
+
+  if (!record || record.used_at || new Date(record.expires_at).getTime() < Date.now()) {
     return null;
   }
 
-  await prisma.passwordResetToken.update({
-    where: { id: record.id },
-    data: { usedAt: new Date() },
-  });
+  await supabase
+    .from('password_reset_tokens')
+    .update({ used_at: new Date().toISOString() })
+    .eq('id', record.id);
 
-  return record.userId;
+  return record.user_id;
 }

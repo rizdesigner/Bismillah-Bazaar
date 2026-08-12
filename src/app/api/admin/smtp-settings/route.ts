@@ -1,33 +1,32 @@
-import { getToken } from "next-auth/jwt";
+export const runtime = 'edge';
+
+import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { encrypt, decrypt } from "@/lib/crypto";
 
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!token || token.role !== "admin") {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const settings = await prisma.settings.findMany({
-      where: {
-        key: {
-          in: ["smtp_host", "smtp_port", "smtp_secure", "smtp_user", "smtp_pass", "smtp_from"],
-        },
-      },
-    });
+    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const settingsMap = settings.reduce((acc, s) => {
+    const { data: settings } = await supabase
+      .from('settings')
+      .select('*')
+      .in('key', ["smtp_host", "smtp_port", "smtp_secure", "smtp_user", "smtp_pass", "smtp_from"]);
+
+    const settingsMap = (settings || []).reduce((acc: Record<string, string>, s: any) => {
       let value = s.value;
       if (s.key === "smtp_pass" && value) {
-        try {
-          value = decrypt(value);
-          value = "••••••••" + value.slice(-4);
-        } catch {
-          value = "••••••••";
-        }
+        // Mask the password for display
+        value = "••••••••" + value.slice(-4);
       }
       acc[s.key] = value;
       return acc;
@@ -42,9 +41,15 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!token || token.role !== "admin") {
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -58,16 +63,23 @@ export async function PUT(req: NextRequest) {
       { key: "smtp_from", value: smtp_from || smtp_user || "" },
     ];
 
+    // Only update password if a new one was provided (not masked)
     if (smtp_pass && !smtp_pass.startsWith("••••••••")) {
-      updates.push({ key: "smtp_pass", value: encrypt(smtp_pass) });
+      updates.push({ key: "smtp_pass", value: smtp_pass });
     }
 
     for (const update of updates) {
-      await prisma.settings.upsert({
-        where: { key: update.key },
-        update: { value: update.value },
-        create: { key: update.key, value: update.value },
-      });
+      const { data: existing } = await supabase
+        .from('settings')
+        .select('id')
+        .eq('key', update.key)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from('settings').update({ value: update.value }).eq('key', update.key);
+      } else {
+        await supabase.from('settings').insert({ key: update.key, value: update.value });
+      }
     }
 
     return NextResponse.json({ success: true });

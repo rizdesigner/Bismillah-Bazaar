@@ -1,49 +1,12 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { type NextRequest } from 'next/server'
+import { updateSession } from '@/lib/supabase-middleware'
 
-const publicPaths = [
-  "/",
-  "/login",
-  "/register",
-  "/register/pending",
-  "/forgot-password",
-  "/reset-password",
-];
-
-export default withAuth(
-  function middleware(req) {
-    const { pathname } = req.nextUrl;
-
-    const isPublic = publicPaths.some(
-      (p) => pathname === p || pathname.startsWith(p + "/")
-    );
-
-    if (!isPublic && !req.nextauth.token) {
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
-
-    const role = req.nextauth.token?.role as string | undefined;
-    const status = req.nextauth.token?.status as string | undefined;
-
-    if (pathname.startsWith("/admin")) {
-      if (role !== "admin") {
-        return NextResponse.redirect(new URL("/", req.url));
-      }
-    }
-
-    if (["/catalog", "/orders"].includes(pathname)) {
-      if (status !== "active") {
-        return NextResponse.redirect(new URL("/register/pending", req.url));
-      }
-    }
-  },
-  {
-    callbacks: {
-      authorized: () => true,
-    },
-  }
-);
+export async function middleware(request: NextRequest) {
+  return await updateSession(request)
+}
 
 export const config = {
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
-};
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+}

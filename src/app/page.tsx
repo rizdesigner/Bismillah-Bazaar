@@ -1,19 +1,27 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { createClient } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const session = await getServerSession(authOptions);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (session?.user?.role === "admin") {
-    redirect("/admin");
-  }
+  if (user) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
 
-  if (session?.user?.role === "customer") {
-    redirect("/catalog");
+    if (profile?.role === "admin") {
+      redirect("/admin");
+    }
+
+    if (profile?.role === "customer") {
+      redirect("/catalog");
+    }
   }
 
   return (
