@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ResetLinkModal } from "./reset-link-modal";
 import { ClientPricingManager } from "./client-pricing-manager";
+import { AccountsReceivable } from "./accounts-receivable";
 
 type InventoryItem = {
   id: string;
@@ -24,14 +25,20 @@ type OrderItem = {
 
 type Order = {
   id: string;
+  orderNumber: string;
   status: string;
   originalTotal: number;
   finalTotal: number | null;
   requestedEta: string | null;
   adminEta: string | null;
   deliveredAt: string | null;
+  dueDate: string | null;
+  paymentStatus: string;
+  paymentMethod: string | null;
+  paidAt: string | null;
   createdAt: string;
   user: {
+    id: string;
     restaurantName: string | null;
     phone: string | null;
     email: string;
@@ -57,7 +64,7 @@ type Props = {
 };
 
 export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Props) {
-  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered" | "pricing">("inventory");
+  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered" | "pricing" | "receivable">("inventory");
   const [resetTarget, setResetTarget] = useState<{
     id: string;
     email: string;
@@ -74,6 +81,7 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
     { id: "users" as const, label: "Active", count: customers.length },
     { id: "pending" as const, label: "Pending", count: pendingCustomers.length },
     { id: "pricing" as const, label: "Pricing", count: null },
+    { id: "receivable" as const, label: "Receivable", count: null },
   ];
 
   return (
@@ -117,6 +125,7 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
           }))}
         />
       )}
+      {activeTab === "receivable" && <AccountsReceivable orders={orders} />}
 
       <ResetLinkModal user={resetTarget} onClose={() => setResetTarget(null)} />
     </div>
@@ -480,10 +489,23 @@ function OrdersTab({ orders }: { orders: Order[] }) {
     status: "pending",
   });
   const [loading, setLoading] = useState(false);
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "unpaid" | "paid" | "overdue">("all");
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
 
-  const flattenedOrders = orders.flatMap((order) =>
+  const filteredOrders = orders.filter((order) => {
+    if (paymentFilter === "all") return true;
+    if (paymentFilter === "paid") return order.paymentStatus === "paid";
+    if (paymentFilter === "unpaid") return order.paymentStatus === "unpaid";
+    if (paymentFilter === "overdue") {
+      return order.paymentStatus !== "paid" && order.dueDate && new Date(order.dueDate) < new Date();
+    }
+    return true;
+  });
+
+  const flattenedOrders = filteredOrders.flatMap((order) =>
     order.items.map((item) => ({
       orderId: order.id,
+      orderNumber: order.orderNumber,
       restaurantName: order.user.restaurantName || "N/A",
       phone: order.user.phone || "N/A",
       email: order.user.email,
@@ -495,8 +517,33 @@ function OrdersTab({ orders }: { orders: Order[] }) {
       adminEta: order.adminEta,
       createdAt: order.createdAt,
       status: order.status,
+      paymentStatus: order.paymentStatus,
+      dueDate: order.dueDate,
     }))
   );
+
+  const handleMarkAsPaid = async (orderId: string, paymentMethod: string) => {
+    setMarkingPaid(orderId);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentStatus: "paid", paymentMethod }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to mark as paid");
+        return;
+      }
+
+      window.location.reload();
+    } catch {
+      alert("An error occurred");
+    } finally {
+      setMarkingPaid(null);
+    }
+  };
 
   const handleEdit = (order: Order) => {
     setEditingOrder(order);
@@ -539,6 +586,23 @@ function OrdersTab({ orders }: { orders: Order[] }) {
 
   return (
     <div>
+      {/* Payment Status Filters */}
+      <div className="mb-4 flex gap-2">
+        {(["all", "unpaid", "overdue", "paid"] as const).map((filter) => (
+          <button
+            key={filter}
+            onClick={() => setPaymentFilter(filter)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm ${
+              paymentFilter === filter
+                ? "bg-emerald-600 text-white"
+                : "bg-white text-zinc-700 hover:bg-zinc-50"
+            }`}
+          >
+            {filter.charAt(0).toUpperCase() + filter.slice(1)}
+          </button>
+        ))}
+      </div>
+
       {/* Mobile: Card Layout */}
       <div className="space-y-2 sm:hidden">
         {flattenedOrders.map((row, idx) => (
@@ -562,8 +626,22 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                   >
                     {row.status}
                   </span>
+                  <span
+                    className={`inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                      row.paymentStatus === "paid"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : row.paymentStatus === "overdue"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {row.paymentStatus}
+                  </span>
                 </div>
-                <h4 className="mt-1.5 text-sm font-medium text-zinc-900">
+                <p className="mt-1 text-[10px] font-medium text-zinc-500">
+                  {row.orderNumber}
+                </p>
+                <h4 className="mt-0.5 text-sm font-medium text-zinc-900">
                   {row.restaurantName}
                 </h4>
                 <p className="mt-0.5 text-xs text-zinc-600">{row.itemName}</p>
@@ -572,17 +650,36 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                   <p>Price: {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}</p>
                   {row.requestedEta && <p>Req: {new Date(row.requestedEta).toLocaleString()}</p>}
                   {row.adminEta && <p className="font-medium text-emerald-700">Admin: {new Date(row.adminEta).toLocaleString()}</p>}
+                  {row.dueDate && row.paymentStatus !== "paid" && (
+                    <p className={new Date(row.dueDate) < new Date() ? "font-medium text-red-600" : ""}>
+                      Due: {new Date(row.dueDate).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  const order = orders.find((o) => o.id === row.orderId);
-                  if (order) handleEdit(order);
-                }}
-                className="rounded px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-50"
-              >
-                Edit
-              </button>
+              <div className="flex flex-col gap-1">
+                <button
+                  onClick={() => {
+                    const order = orders.find((o) => o.id === row.orderId);
+                    if (order) handleEdit(order);
+                  }}
+                  className="rounded px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-50"
+                >
+                  Edit
+                </button>
+                {row.paymentStatus !== "paid" && (
+                  <button
+                    onClick={() => {
+                      const method = prompt("Payment method (etransfer/cash/check/credit_card):");
+                      if (method) handleMarkAsPaid(row.orderId, method);
+                    }}
+                    disabled={markingPaid === row.orderId}
+                    className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    {markingPaid === row.orderId ? "..." : "Mark Paid"}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -590,17 +687,14 @@ function OrdersTab({ orders }: { orders: Order[] }) {
 
       {/* Desktop: Table Layout */}
       <div className="hidden overflow-x-auto rounded-lg border border-zinc-200 bg-white sm:block">
-        <table className="w-full min-w-[700px]">
+        <table className="w-full min-w-[900px]">
           <thead className="border-b border-zinc-200 bg-zinc-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Order #
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Restaurant
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                Phone
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                Email
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Item
@@ -614,11 +708,11 @@ function OrdersTab({ orders }: { orders: Order[] }) {
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Delivery
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                Order Date
-              </th>
               <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Status
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Payment
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Actions
@@ -629,10 +723,11 @@ function OrdersTab({ orders }: { orders: Order[] }) {
             {flattenedOrders.map((row, idx) => (
               <tr key={`${row.orderId}-${row.itemName}-${idx}`} className="hover:bg-zinc-50">
                 <td className="px-4 py-3 text-sm font-medium text-zinc-900">
+                  {row.orderNumber}
+                </td>
+                <td className="px-4 py-3 text-sm font-medium text-zinc-900">
                   {row.restaurantName}
                 </td>
-                <td className="px-4 py-3 text-sm text-zinc-600">{row.phone}</td>
-                <td className="px-4 py-3 text-sm text-zinc-600">{row.email}</td>
                 <td className="px-4 py-3 text-sm text-zinc-900">{row.itemName}</td>
                 <td className="px-4 py-3 text-right text-sm text-zinc-900">
                   {row.quantity}
@@ -650,9 +745,6 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                   {row.adminEta && <div className="text-xs font-medium text-emerald-700">Admin: {new Date(row.adminEta).toLocaleString()}</div>}
                   {!row.requestedEta && !row.adminEta && "—"}
                 </td>
-                <td className="px-4 py-3 text-sm text-zinc-600">
-                  {new Date(row.createdAt).toLocaleString()}
-                </td>
                 <td className="px-4 py-3 text-center">
                   <span
                     className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
@@ -668,16 +760,48 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                     {row.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => {
-                      const order = orders.find((o) => o.id === row.orderId);
-                      if (order) handleEdit(order);
-                    }}
-                    className="text-xs font-medium text-emerald-600 hover:text-emerald-500"
+                <td className="px-4 py-3 text-center">
+                  <span
+                    className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                      row.paymentStatus === "paid"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : row.paymentStatus === "overdue"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
                   >
-                    Edit
-                  </button>
+                    {row.paymentStatus}
+                  </span>
+                  {row.dueDate && row.paymentStatus !== "paid" && (
+                    <div className={`mt-1 text-[10px] ${new Date(row.dueDate) < new Date() ? "font-medium text-red-600" : "text-zinc-500"}`}>
+                      Due: {new Date(row.dueDate).toLocaleDateString()}
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => {
+                        const order = orders.find((o) => o.id === row.orderId);
+                        if (order) handleEdit(order);
+                      }}
+                      className="text-xs font-medium text-emerald-600 hover:text-emerald-500"
+                    >
+                      Edit
+                    </button>
+                    {row.paymentStatus !== "paid" && (
+                      <button
+                        onClick={() => {
+                          const method = prompt("Payment method (etransfer/cash/check/credit_card):");
+                          if (method) handleMarkAsPaid(row.orderId, method);
+                        }}
+                        disabled={markingPaid === row.orderId}
+                        className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                      >
+                        {markingPaid === row.orderId ? "..." : "Mark Paid"}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

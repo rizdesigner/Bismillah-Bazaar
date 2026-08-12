@@ -1,6 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { generateOrderNumber } from "@/lib/order-number";
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,11 +73,17 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const orderNumber = await generateOrderNumber();
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 7); // Net 7 payment terms
+
     const order = await prisma.order.create({
       data: {
         userId,
+        orderNumber,
         originalTotal,
         requestedEta: requestedEta ? new Date(requestedEta) : null,
+        dueDate,
         status: "pending",
         items: {
           create: validatedItems.map((item) => ({

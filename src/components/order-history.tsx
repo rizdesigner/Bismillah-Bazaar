@@ -15,12 +15,17 @@ type OrderItem = {
 
 type Order = {
   id: string;
+  orderNumber: string;
   status: string;
   originalTotal: number;
   finalTotal: number | null;
   requestedEta: string | null;
   adminEta: string | null;
   deliveredAt: string | null;
+  dueDate: string | null;
+  paymentStatus: string;
+  paymentMethod: string | null;
+  paidAt: string | null;
   createdAt: string;
   items: OrderItem[];
 };

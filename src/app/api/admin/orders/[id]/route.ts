@@ -18,7 +18,7 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const { items, finalTotal, adminEta, status } = await req.json();
+    const { items, finalTotal, adminEta, status, paymentStatus, paymentMethod } = await req.json();
 
     const order = await prisma.order.findUnique({
       where: { id },
@@ -67,12 +67,19 @@ export async function PATCH(
       changes.push(`Status: ${order.status} → ${status}`);
     }
 
+    if (paymentStatus && paymentStatus !== order.paymentStatus) {
+      changes.push(`Payment: ${order.paymentStatus} → ${paymentStatus}`);
+    }
+
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: {
         finalTotal: finalTotal !== undefined ? finalTotal : undefined,
         adminEta: adminEta ? new Date(adminEta) : null,
         status: status || undefined,
+        paymentStatus: paymentStatus || undefined,
+        paymentMethod: paymentMethod || undefined,
+        paidAt: paymentStatus === "paid" ? new Date() : undefined,
         deliveredAt:
           status === "delivered"
             ? order.deliveredAt ?? new Date()

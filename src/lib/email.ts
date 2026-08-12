@@ -80,11 +80,14 @@ export async function sendPasswordResetEmail(
 
 type DeliveryOrder = {
   id: string;
+  orderNumber: string;
   originalTotal: any;
   finalTotal: any;
   requestedEta: Date | null;
   adminEta: Date | null;
   deliveredAt: Date | null;
+  dueDate: Date | null;
+  paymentStatus: string;
   items: {
     requestedKg: any;
     fulfilledKg: any;
@@ -117,6 +120,13 @@ export async function sendDeliveryReceipt(
     const deliveredDate = order.deliveredAt
       ? order.deliveredAt.toLocaleDateString()
       : new Date().toLocaleDateString();
+    const dueDate = order.dueDate
+      ? order.dueDate.toLocaleDateString()
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString();
+
+    const paymentStatusBadge = order.paymentStatus === "paid"
+      ? '<span style="background:#10b981;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;font-weight:bold">PAID</span>'
+      : `<span style="background:#f59e0b;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;font-weight:bold">UNPAID - Payment Due by ${dueDate}</span>`;
 
     const itemRows = order.items
       .map(
@@ -132,16 +142,19 @@ export async function sendDeliveryReceipt(
     await transporter.sendMail({
       from: config.from,
       to,
-      subject: `Delivery Receipt — Order #${order.id.slice(0, 8)}`,
-      text: `Your order has been delivered on ${deliveredDate}.\n\nItems:\n${order.items.map((oi) => `• ${oi.item.itemName}: ${Number(oi.fulfilledKg ?? oi.requestedKg)} kg`).join("\n")}\n\nTotal: $${finalTotal}\n\nThank you for ordering from Bismillah Bazaar.`,
+      subject: `Delivery Confirmation & Invoice #${order.orderNumber}`,
+      text: `Your order has been delivered on ${deliveredDate}.\n\nOrder Number: ${order.orderNumber}\n\nItems:\n${order.items.map((oi) => `• ${oi.item.itemName}: ${Number(oi.fulfilledKg ?? oi.requestedKg)} kg`).join("\n")}\n\nTotal: $${finalTotal}\n\nPayment Status: ${order.paymentStatus.toUpperCase()}\nPayment Due: ${dueDate}\n\nPlease send Interac e-Transfer to info@halalbutcher.com referencing #${order.orderNumber}.\n\nThank you for ordering from Bismillah Bazaar.`,
       html: `
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#fff">
           <div style="background:#059669;padding:24px;text-align:center">
             <h1 style="color:#fff;margin:0;font-size:22px">Bismillah Bazaar</h1>
-            <p style="color:#d1fae5;margin:4px 0 0;font-size:14px">Delivery Receipt</p>
+            <p style="color:#d1fae5;margin:4px 0 0;font-size:14px">Delivery Confirmation & Invoice</p>
           </div>
           <div style="padding:24px">
-            <p style="font-size:16px;margin:0 0 16px">Your order has been <strong style="color:#059669">delivered</strong> on ${deliveredDate}.</p>
+            <div style="margin-bottom:16px">
+              <p style="font-size:16px;margin:0 0 8px">Your order has been <strong style="color:#059669">delivered</strong> on ${deliveredDate}.</p>
+              <p style="font-size:14px;color:#52525b;margin:0">Order Number: <strong>${order.orderNumber}</strong></p>
+            </div>
             <table style="width:100%;border-collapse:collapse;margin:16px 0">
               <thead>
                 <tr style="background:#f4f4f5">
@@ -155,8 +168,20 @@ export async function sendDeliveryReceipt(
             <div style="text-align:right;font-size:20px;font-weight:bold;color:#059669;margin:16px 0">
               Total: $${finalTotal}
             </div>
+            <div style="text-align:center;margin:24px 0">
+              ${paymentStatusBadge}
+            </div>
+            <div style="background:#f4f4f5;padding:16px;border-radius:8px;margin-top:24px">
+              <p style="font-size:14px;margin:0 0 8px"><strong>Payment Instructions:</strong></p>
+              <p style="font-size:13px;margin:0;color:#52525b">
+                Please send Interac e-Transfer to <strong>info@halalbutcher.com</strong> referencing <strong>#${order.orderNumber}</strong>.
+              </p>
+              <p style="font-size:13px;margin:8px 0 0;color:#52525b">
+                Payment due by: <strong>${dueDate}</strong>
+              </p>
+            </div>
             <p style="font-size:12px;color:#71717a;margin-top:24px;text-align:center">
-              Order #${order.id.slice(0, 8)} &middot; Thank you for ordering from Bismillah Bazaar
+              Thank you for ordering from Bismillah Bazaar
             </p>
           </div>
         </div>

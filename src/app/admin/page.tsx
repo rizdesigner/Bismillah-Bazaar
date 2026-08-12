@@ -56,6 +56,8 @@ export default async function AdminPage() {
     requestedEta: order.requestedEta ? order.requestedEta.toISOString() : null,
     adminEta: order.adminEta ? order.adminEta.toISOString() : null,
     deliveredAt: order.deliveredAt ? order.deliveredAt.toISOString() : null,
+    dueDate: order.dueDate ? order.dueDate.toISOString() : null,
+    paidAt: order.paidAt ? order.paidAt.toISOString() : null,
     items: order.items.map((item) => ({
       ...item,
       requestedKg: Number(item.requestedKg),

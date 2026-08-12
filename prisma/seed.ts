@@ -72,9 +72,11 @@ async function main() {
   const order1 = await prisma.order.create({
     data: {
       userId: activeCustomer.id,
+      orderNumber: "ORD-1001",
       status: "pending",
       originalTotal: 61.5,
       requestedEta: new Date(now + 2 * day),
+      dueDate: new Date(now + 9 * day),
       items: {
         create: [
           { itemId: byName("Chicken Breast").id, requestedKg: 5, fulfilledKg: null },
@@ -87,11 +89,13 @@ async function main() {
   const order2 = await prisma.order.create({
     data: {
       userId: activeCustomer.id,
+      orderNumber: "ORD-1002",
       status: "confirmed",
       originalTotal: 54.6,
       finalTotal: 54.6,
       requestedEta: new Date(now + 3 * day),
       adminEta: new Date(now + 3 * day),
+      dueDate: new Date(now + 10 * day),
       items: {
         create: [
           { itemId: byName("Chicken Breast").id, requestedKg: 6, fulfilledKg: 6 },
