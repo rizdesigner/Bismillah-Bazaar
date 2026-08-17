@@ -14,7 +14,7 @@ type Conversation = {
     id: string;
     restaurant_name: string | null;
     email: string;
-  };
+  } | null;
 };
 
 type Message = {
@@ -69,7 +69,7 @@ export function ChatManager() {
       `)
       .order("updated_at", { ascending: false });
 
-    if (data) setConversations(data);
+    if (data) setConversations(data as Conversation[]);
     setLoadingConvs(false);
   }
 

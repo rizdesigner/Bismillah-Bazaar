@@ -17,6 +17,9 @@ type Product = {
 
 export function ProductCard({ product }: { product: Product }) {
   const { items, addItem, updateQty, removeItem } = useCart();
+  const hasSizes = product.pieceSizes && product.pieceSizes.length > 0;
+  const defaultSize = hasSizes ? product.pieceSizes![0] : null;
+  const [selectedSize, setSelectedSize] = useState<PieceSize | null>(defaultSize);
   const cartItem = items.find((i) =>
     i.pieceSize
       ? i.itemId === product.id && i.pieceSize.id === selectedSize?.id
@@ -24,10 +27,6 @@ export function ProductCard({ product }: { product: Product }) {
   );
   const qty = cartItem?.quantity ?? 0;
   const selectedPieceSize = cartItem?.pieceSize;
-  const hasSizes = product.pieceSizes && product.pieceSizes.length > 0;
-  const [selectedSize, setSelectedSize] = useState<PieceSize | null>(
-    selectedPieceSize || (hasSizes ? product.pieceSizes![0] : null)
-  );
 
   const effectivePrice = selectedPieceSize
     ? product.priceKg * (selectedPieceSize.sizeValue / 1000)

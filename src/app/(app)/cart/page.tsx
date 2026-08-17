@@ -68,7 +68,7 @@ export default function CartPage() {
       <div className="mt-4 space-y-2 sm:mt-6 sm:space-y-3">
         {items.map((item) => {
           const isPiece = !!item.pieceSize;
-          const weightKg = isPiece
+          const weightKg = isPiece && item.pieceSize
             ? (item.quantity * item.pieceSize.sizeValue) / 1000
             : item.quantity;
           const itemTotal = weightKg * item.basePriceKg;
@@ -95,7 +95,7 @@ export default function CartPage() {
                     −
                   </button>
                   <span className="w-16 text-center text-xs font-medium sm:w-20 sm:text-sm">
-                    {isPiece
+                    {isPiece && item.pieceSize
                       ? `${item.quantity} × ${item.pieceSize.sizeLabel}`
                       : `${item.quantity} kg`}
                   </span>
