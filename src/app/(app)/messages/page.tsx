@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase-client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type Conversation = {
   id: string;
@@ -18,6 +19,14 @@ type Message = {
   created_at: string;
 };
 
+function useSupabase() {
+  const ref = useRef<SupabaseClient | null>(null);
+  if (!ref.current && typeof window !== "undefined") {
+    ref.current = createClient();
+  }
+  return ref;
+}
+
 export default function MessagesPage() {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -25,9 +34,17 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
+  const supabaseRef = useSupabase();
+
+  const getSupabase = useCallback(() => {
+    if (!supabaseRef.current) {
+      supabaseRef.current = createClient();
+    }
+    return supabaseRef.current;
+  }, [supabaseRef]);
 
   const initConversation = useCallback(async () => {
+    const supabase = getSupabase();
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -49,19 +66,21 @@ export default function MessagesPage() {
 
     setConversation(conv);
     setLoading(false);
-  }, [supabase]);
+  }, [getSupabase]);
 
   const fetchMessages = useCallback(async () => {
     if (!conversation) return;
+    const supabase = getSupabase();
     const { data } = await supabase
       .from("messages")
       .select("*")
       .eq("conversation_id", conversation.id)
       .order("created_at", { ascending: true });
     if (data) setMessages(data);
-  }, [conversation, supabase]);
+  }, [conversation, getSupabase]);
 
   const sendMessage = useCallback(async () => {
+    const supabase = getSupabase();
     if (!newMessage.trim() || !conversation || sending) return;
     setSending(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -83,10 +102,12 @@ export default function MessagesPage() {
       setNewMessage("");
     }
     setSending(false);
-  }, [newMessage, conversation, sending, supabase]);
+  }, [newMessage, conversation, sending, getSupabase]);
 
   useEffect(() => {
-    initConversation();
+    if (typeof window !== "undefined") {
+      initConversation();
+    }
   }, [initConversation]);
 
   useEffect(() => {
