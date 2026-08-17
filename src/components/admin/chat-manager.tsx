@@ -74,7 +74,7 @@ export function ChatManager() {
       ...row,
       user: Array.isArray(row.users) ? row.users[0] ?? null : row.users ?? null,
     }));
-    setConversations(mapped as Conversation[]);
+    setConversations(mapped as unknown as Conversation[]);
     setLoadingConvs(false);
   }
 
