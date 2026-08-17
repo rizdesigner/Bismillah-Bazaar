@@ -46,8 +46,21 @@ export async function POST(req: NextRequest) {
       (clientOverrides || []).map((o: any) => [o.item_id, o])
     );
 
+    const { data: allPieceSizes } = await supabase
+      .from('piece_sizes')
+      .select('id, size_value');
+
+    const pieceSizeMap = new Map(
+      (allPieceSizes || []).map((ps: any) => [ps.id, ps])
+    );
+
     let originalTotal = 0;
-    const validatedItems: { itemId: string; requestedKg: number; basePriceKg: number }[] = [];
+    const validatedItems: {
+      itemId: string;
+      pieceSizeId?: string;
+      requestedKg: number;
+      basePriceKg: number;
+    }[] = [];
 
     for (const item of items) {
       const { data: inventory } = await supabase
@@ -76,10 +89,19 @@ export async function POST(req: NextRequest) {
         ? Number(override.custom_price_kg)
         : Number(inventory.base_price_kg);
 
-      originalTotal += price * item.requestedKg;
+      let weightKg = Number(item.requestedKg);
+      if (item.pieceSizeId) {
+        const ps = pieceSizeMap.get(item.pieceSizeId);
+        if (ps) {
+          weightKg = (Number(item.requestedKg) * ps.size_value) / 1000;
+        }
+      }
+
+      originalTotal += price * weightKg;
       validatedItems.push({
         itemId: item.itemId,
-        requestedKg: item.requestedKg,
+        pieceSizeId: item.pieceSizeId || undefined,
+        requestedKg: Number(item.requestedKg),
         basePriceKg: price,
       });
     }
@@ -106,6 +128,7 @@ export async function POST(req: NextRequest) {
     const orderItems = validatedItems.map((item) => ({
       order_id: order.id,
       item_id: item.itemId,
+      piece_size_id: item.pieceSizeId || null,
       requested_kg: item.requestedKg,
     }));
 

@@ -8,8 +8,8 @@ type CartContextType = {
   count: number;
   total: number;
   addItem: (item: Omit<cart.CartItem, "quantity">, qty: number) => void;
-  updateQty: (itemId: string, qty: number) => void;
-  removeItem: (itemId: string) => void;
+  updateQty: (itemId: string, pieceSizeId: string | undefined, qty: number) => void;
+  removeItem: (itemId: string, pieceSizeId?: string) => void;
   clear: () => void;
 };
 
@@ -27,13 +27,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems(next);
   }, []);
 
-  const updateQty = useCallback((itemId: string, qty: number) => {
-    const next = cart.updateCartQty(itemId, qty);
+  const updateQty = useCallback((itemId: string, pieceSizeId: string | undefined, qty: number) => {
+    const next = cart.updateCartQty(itemId, pieceSizeId, qty);
     setItems(next);
   }, []);
 
-  const removeItem = useCallback((itemId: string) => {
-    const next = cart.removeFromCart(itemId);
+  const removeItem = useCallback((itemId: string, pieceSizeId?: string) => {
+    const next = cart.removeFromCart(itemId, pieceSizeId);
     setItems(next);
   }, []);
 
@@ -43,7 +43,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
-  const total = items.reduce((sum, i) => sum + i.quantity * i.basePriceKg, 0);
+  const total = items.reduce((sum, i) => {
+    const weightKg = i.pieceSize ? (i.quantity * i.pieceSize.sizeValue) / 1000 : i.quantity;
+    return sum + weightKg * i.basePriceKg;
+  }, 0);
 
   return (
     <CartContext.Provider value={{ items, count, total, addItem, updateQty, removeItem, clear }}>

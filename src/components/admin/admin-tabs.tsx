@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ResetLinkModal } from "./reset-link-modal";
 import { ClientPricingManager } from "./client-pricing-manager";
 import { AccountsReceivable } from "./accounts-receivable";
+import { ChatManager } from "./chat-manager";
 
 type InventoryItem = {
   id: string;
@@ -64,7 +65,7 @@ type Props = {
 };
 
 export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Props) {
-  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered" | "pricing" | "receivable">("inventory");
+  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered" | "pricing" | "receivable" | "messages">("inventory");
   const [resetTarget, setResetTarget] = useState<{
     id: string;
     email: string;
@@ -82,6 +83,7 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
     { id: "pending" as const, label: "Pending", count: pendingCustomers.length },
     { id: "pricing" as const, label: "Pricing", count: null },
     { id: "receivable" as const, label: "Receivable", count: null },
+    { id: "messages" as const, label: "Messages", count: null },
   ];
 
   return (
@@ -126,6 +128,7 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
         />
       )}
       {activeTab === "receivable" && <AccountsReceivable orders={orders} />}
+      {activeTab === "messages" && <ChatManager />}
 
       <ResetLinkModal user={resetTarget} onClose={() => setResetTarget(null)} />
     </div>

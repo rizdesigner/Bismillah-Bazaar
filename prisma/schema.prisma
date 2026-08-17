@@ -59,6 +59,7 @@ model User {
   notifications      Notification[]
   passwordResetTokens PasswordResetToken[]
   customOverrides    ClientProductOverride[]
+  conversations      Conversation[]
 
   @@map("users")
 }
@@ -73,6 +74,7 @@ model Inventory {
   createdAt       DateTime                @default(now()) @map("created_at")
   orderItems      OrderItem[]
   customOverrides ClientProductOverride[]
+  pieceSizes      PieceSize[]
 
   @@map("inventory")
 }
@@ -116,13 +118,15 @@ model Notification {
 }
 
 model OrderItem {
-  id          String    @id @default(uuid()) @db.Uuid
-  orderId     String    @map("order_id") @db.Uuid
-  itemId      String    @map("item_id") @db.Uuid
-  requestedKg Decimal   @db.Decimal(10, 2) @map("requested_kg")
-  fulfilledKg Decimal?  @db.Decimal(10, 2) @map("fulfilled_kg")
-  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  item        Inventory @relation(fields: [itemId], references: [id])
+  id           String     @id @default(uuid()) @db.Uuid
+  orderId      String     @map("order_id") @db.Uuid
+  itemId       String     @map("item_id") @db.Uuid
+  pieceSizeId  String?    @map("piece_size_id") @db.Uuid
+  requestedKg  Decimal    @db.Decimal(10, 2) @map("requested_kg")
+  fulfilledKg  Decimal?   @db.Decimal(10, 2) @map("fulfilled_kg")
+  order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item         Inventory  @relation(fields: [itemId], references: [id])
+  pieceSize    PieceSize? @relation(fields: [pieceSizeId], references: [id])
 
   @@index([orderId])
   @@index([itemId])
@@ -167,4 +171,47 @@ model ClientProductOverride {
   @@index([userId])
   @@index([itemId])
   @@map("client_product_overrides")
+}
+
+model PieceSize {
+  id         String     @id @default(uuid()) @db.Uuid
+  itemId     String     @map("item_id") @db.Uuid
+  sizeLabel  String     @map("size_label")
+  sizeValue  Int        @map("size_value")
+  sizeUnit   String     @default("grm") @map("size_unit")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  item       Inventory  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([itemId])
+  @@map("piece_sizes")
+}
+
+model Conversation {
+  id                 String    @id @default(uuid()) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  adminUnreadCount   Int       @default(0) @map("admin_unread_count")
+  customerUnreadCount Int      @default(0) @map("customer_unread_count")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages           Message[]
+
+  @@index([userId])
+  @@map("conversations")
+}
+
+model Message {
+  id              String       @id @default(uuid()) @db.Uuid
+  conversationId  String       @map("conversation_id") @db.Uuid
+  senderId        String       @map("sender_id") @db.Uuid
+  senderRole      String       @map("sender_role")
+  content         String
+  readAt          DateTime?    @map("read_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@map("messages")
 }

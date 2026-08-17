@@ -1,9 +1,17 @@
+export type PieceSize = {
+  id: string;
+  sizeLabel: string;
+  sizeValue: number;
+  sizeUnit: string;
+};
+
 export type CartItem = {
   itemId: string;
   itemName: string;
   category: string;
   basePriceKg: number;
   quantity: number;
+  pieceSize?: PieceSize;
 };
 
 const CART_KEY = "bismillah_cart";
@@ -23,9 +31,14 @@ function saveCart(items: CartItem[]) {
   localStorage.setItem(CART_KEY, JSON.stringify(items));
 }
 
+function cartItemKey(item: CartItem): string {
+  return item.pieceSize ? `${item.itemId}::${item.pieceSize.id}` : item.itemId;
+}
+
 export function addToCart(item: Omit<CartItem, "quantity">, quantity: number): CartItem[] {
   const cart = getCart();
-  const existing = cart.find((i) => i.itemId === item.itemId);
+  const key = item.pieceSize ? `${item.itemId}::${item.pieceSize.id}` : item.itemId;
+  const existing = cart.find((i) => cartItemKey(i) === key);
   if (existing) {
     existing.quantity = Math.round((existing.quantity + quantity) * 10) / 10;
   } else {
@@ -35,12 +48,13 @@ export function addToCart(item: Omit<CartItem, "quantity">, quantity: number): C
   return cart;
 }
 
-export function updateCartQty(itemId: string, quantity: number): CartItem[] {
+export function updateCartQty(itemId: string, pieceSizeId: string | undefined, quantity: number): CartItem[] {
   if (quantity <= 0) {
-    return removeFromCart(itemId);
+    return removeFromCart(itemId, pieceSizeId);
   }
   const cart = getCart();
-  const existing = cart.find((i) => i.itemId === itemId);
+  const key = pieceSizeId ? `${itemId}::${pieceSizeId}` : itemId;
+  const existing = cart.find((i) => cartItemKey(i) === key);
   if (existing) {
     existing.quantity = Math.round(quantity * 10) / 10;
   }
@@ -48,8 +62,9 @@ export function updateCartQty(itemId: string, quantity: number): CartItem[] {
   return cart;
 }
 
-export function removeFromCart(itemId: string): CartItem[] {
-  const cart = getCart().filter((i) => i.itemId !== itemId);
+export function removeFromCart(itemId: string, pieceSizeId?: string): CartItem[] {
+  const key = pieceSizeId ? `${itemId}::${pieceSizeId}` : itemId;
+  const cart = getCart().filter((i) => cartItemKey(i) !== key);
   saveCart(cart);
   return cart;
 }
