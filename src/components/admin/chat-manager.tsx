@@ -61,15 +61,20 @@ export function ChatManager() {
       .from("conversations")
       .select(`
         id,
+        user_id,
         admin_unread_count,
         customer_unread_count,
         created_at,
         updated_at,
-        user:users!user_id(id, restaurant_name, email)
+        users!user_id(id, restaurant_name, email)
       `)
       .order("updated_at", { ascending: false });
 
-    if (data) setConversations(data as Conversation[]);
+    const mapped = (data ?? []).map((row: Record<string, unknown>) => ({
+      ...row,
+      user: Array.isArray(row.users) ? row.users[0] ?? null : row.users ?? null,
+    }));
+    setConversations(mapped as Conversation[]);
     setLoadingConvs(false);
   }
 
