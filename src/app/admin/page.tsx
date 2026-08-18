@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { AdminTabs } from "@/components/admin/admin-tabs";
 
+export const runtime = 'edge';
 export const metadata = { title: "Admin Dashboard" };
 
 export const dynamic = "force-dynamic";

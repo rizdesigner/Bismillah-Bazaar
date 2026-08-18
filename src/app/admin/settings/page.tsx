@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase-server";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { SmtpSettingsForm } from "@/components/admin/smtp-settings-form";
 
+export const runtime = 'edge';
 export const metadata = { title: "Admin Settings" };
 
 export const dynamic = "force-dynamic";

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { OrderHistory } from "@/components/order-history";
 
+export const runtime = 'edge';
 export const metadata = { title: "Orders" };
 
 export default async function OrdersPage() {

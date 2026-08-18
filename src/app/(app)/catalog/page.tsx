@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { CatalogTabs } from "@/components/catalog-tabs";
 
+export const runtime = 'edge';
 export const metadata = { title: "Catalog" };
 
 export const dynamic = "force-dynamic";

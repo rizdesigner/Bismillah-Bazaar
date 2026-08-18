@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import { ChangePasswordForm } from "@/components/change-password-form";
 
+export const runtime = 'edge';
 export const metadata = { title: "Account" };
 
 export const dynamic = "force-dynamic";
