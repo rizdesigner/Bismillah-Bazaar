@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
-import { withSerwist } from "@serwist/turbopack";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 };
 
-export default withSerwist(nextConfig);
+export default nextConfig;

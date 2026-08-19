@@ -13,7 +13,6 @@
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
-    "@serwist/next": "^9.5.12",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.109.0",
     "next": "16.3.0",
@@ -23,7 +22,6 @@
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.16",
-    "@serwist/turbopack": "^9.5.12",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -32,7 +30,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "pg": "^8.23.0",
-    "serwist": "^9.5.12",
     "tailwindcss": "^4",
     "tsx": "^4.23.11",
     "typescript": "^5",
