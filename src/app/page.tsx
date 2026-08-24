@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
+import { InstallButton } from "@/components/install-button";
 
 export const runtime = 'edge';
 export const dynamic = "force-dynamic";
@@ -27,6 +28,9 @@ export default async function Home() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col bg-zinc-50 px-6">
+      <div className="flex justify-end py-4">
+        <InstallButton />
+      </div>
       <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
         <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-600 text-3xl font-bold text-white shadow-lg shadow-emerald-600/20">
           B
