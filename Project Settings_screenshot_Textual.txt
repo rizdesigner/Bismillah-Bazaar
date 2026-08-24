@@ -1,0 +1,70 @@
+Project Settings
+General configuration, domains, ownership, and lifecycle
+General settings
+Bismillah Bazaar Ordering App
+Project name
+Displayed throughout the dashboard.
+ahbcsxeyvwwpouoklnab
+Project ID
+Reference used in APIs and URLs.
+us-east-2
+Project region
+East US (Ohio)
+
+Save changes
+Project access
+Organization-wide access
+
+All 1 organization members can access this project.
+
+Manage members
+Member	Role
+rizdesigner94@gmail.com
+
+You
+Owner
+Project availability
+Restart or pause your project when performing maintenance
+Restart project
+
+Your project will not be available for a few minutes.
+
+
+Restart project
+
+Pause project
+
+Your project will not be accessible while it is paused.
+
+
+Pause project
+Service versions
+Service versions and upgrade eligibility for your provisioned instance.
+Auth version
+2.195.0
+PostgREST version
+14.15
+Postgres version
+17.6.1.155
+Custom domains
+Present a branded experience to your users
+Custom domains are a Pro Plan add-on
+
+Paid Plans come with free vanity subdomains or Custom Domains for an additional $10/month per domain.
+
+Upgrade to Pro
+Transfer project
+Transfer project to another organization
+
+To transfer projects, the owner must be a member of both the source and target organizations.
+
+
+Transfer project
+Delete project
+Permanently remove your project and its database
+Deleting this project will also remove your database.
+
+Make sure you have made a backup if you want to keep your data.
+
+
+Delete project

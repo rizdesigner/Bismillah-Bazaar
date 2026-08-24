@@ -1,0 +1,4 @@
+Potential issue detected
+This query creates tables without enabling Row Level Security. Clients using anon or authenticated keys may be able to access these tables.
+
+Choose whether to enable Row Level Security before running this query.
