@@ -974,25 +974,133 @@ function OrdersTab({ orders }: { orders: Order[] }) {
 }
 
 function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
-  const flattenedOrders = orders.flatMap((order) =>
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+  );
+
+  const deliveredOrders = orders.filter((o) => o.status === "delivered");
+
+  const filteredOrders = deliveredOrders.filter((order) => {
+    const d = new Date(order.deliveredAt || order.createdAt);
+    const orderMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return orderMonth === selectedMonth;
+  });
+
+  const flattenedOrders = filteredOrders.flatMap((order) =>
     order.items.map((item) => ({
       orderId: order.id,
+      orderNumber: order.orderNumber,
       restaurantName: order.user.restaurantName || "N/A",
       itemName: item.item.itemName,
       quantity: item.requestedKg,
       fulfilledQty: item.fulfilledKg,
       finalPrice: order.finalTotal ? order.finalTotal / order.items.length : null,
+      paymentStatus: order.paymentStatus,
       adminEta: order.adminEta,
       deliveredAt: order.deliveredAt,
       createdAt: order.createdAt,
     }))
   );
 
+  const handleExportCSV = () => {
+    const headers = [
+      "Order Number",
+      "Date",
+      "Delivered",
+      "Restaurant",
+      "Item",
+      "Qty Requested (kg)",
+      "Qty Fulfilled (kg)",
+      "Unit Price",
+      "Total",
+      "Payment Status",
+    ];
+
+    const rows = flattenedOrders.map((row) => [
+      row.orderNumber,
+      new Date(row.createdAt).toLocaleDateString(),
+      row.deliveredAt ? new Date(row.deliveredAt).toLocaleDateString() : "—",
+      row.restaurantName,
+      row.itemName,
+      row.quantity.toString(),
+      row.fulfilledQty?.toString() || row.quantity.toString(),
+      row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—",
+      row.finalPrice ? `$${(row.finalPrice * row.quantity).toFixed(2)}` : "—",
+      row.paymentStatus,
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `orders-${selectedMonth}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const monthOptions: { value: string; label: string }[] = [];
+  const deliveredMonths = new Set(
+    deliveredOrders.map((o) => {
+      const d = new Date(o.deliveredAt || o.createdAt);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    })
+  );
+  deliveredMonths.forEach((m) => {
+    const [year, month] = m.split("-");
+    const date = new Date(Number(year), Number(month) - 1);
+    monthOptions.push({
+      value: m,
+      label: date.toLocaleDateString("en-US", { year: "numeric", month: "long" }),
+    });
+  });
+  monthOptions.sort((a, b) => b.value.localeCompare(a.value));
+
   return (
     <div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
+        >
+          {monthOptions.length === 0 ? (
+            <option value={selectedMonth}>No data</option>
+          ) : (
+            monthOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))
+          )}
+        </select>
+
+        <button
+          onClick={handleExportCSV}
+          disabled={flattenedOrders.length === 0}
+          className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Export CSV
+        </button>
+
+        <span className="text-xs text-zinc-500">
+          {flattenedOrders.length} item{flattenedOrders.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
       {flattenedOrders.length === 0 && (
         <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center sm:p-12">
-          <p className="text-xs text-zinc-500 sm:text-sm">No delivered orders yet</p>
+          <p className="text-xs text-zinc-500 sm:text-sm">No delivered orders for this month</p>
         </div>
       )}
 
@@ -1005,9 +1113,22 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <span className="inline-flex rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-700">
-                  delivered
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-700">
+                    {row.orderNumber}
+                  </span>
+                  <span
+                    className={`inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                      row.paymentStatus === "paid"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : row.paymentStatus === "overdue"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {row.paymentStatus}
+                  </span>
+                </div>
                 <h4 className="mt-1.5 text-sm font-medium text-zinc-900">
                   {row.restaurantName}
                 </h4>
@@ -1015,7 +1136,7 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
                 <div className="mt-2 space-y-0.5 text-[10px] text-zinc-600">
                   <p>Qty: {row.quantity}kg{row.fulfilledQty !== row.quantity && ` → ${row.fulfilledQty}kg`}</p>
                   <p>Price: {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}</p>
-                  <p>Delivered: {row.deliveredAt ? new Date(row.deliveredAt).toLocaleString() : "—"}</p>
+                  <p>Delivered: {row.deliveredAt ? new Date(row.deliveredAt).toLocaleDateString() : "—"}</p>
                 </div>
               </div>
             </div>
@@ -1025,9 +1146,12 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
 
       {/* Desktop: Table Layout */}
       <div className="hidden overflow-x-auto rounded-lg border border-zinc-200 bg-white sm:block">
-        <table className="w-full min-w-[700px]">
+        <table className="w-full min-w-[900px]">
           <thead className="border-b border-zinc-200 bg-zinc-50">
             <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Order #
+              </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Restaurant
               </th>
@@ -1040,8 +1164,8 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Final Price
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                Order Date
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Payment
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Delivered
@@ -1051,6 +1175,9 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
           <tbody className="divide-y divide-zinc-100">
             {flattenedOrders.map((row, idx) => (
               <tr key={`${row.orderId}-${row.itemName}-${idx}`} className="hover:bg-zinc-50">
+                <td className="px-4 py-3 text-sm font-medium text-zinc-900">
+                  {row.orderNumber}
+                </td>
                 <td className="px-4 py-3 text-sm font-medium text-zinc-900">
                   {row.restaurantName}
                 </td>
@@ -1066,11 +1193,21 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
                 <td className="px-4 py-3 text-right text-sm font-medium text-zinc-900">
                   {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}
                 </td>
-                <td className="px-4 py-3 text-sm text-zinc-600">
-                  {new Date(row.createdAt).toLocaleString()}
+                <td className="px-4 py-3 text-center">
+                  <span
+                    className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                      row.paymentStatus === "paid"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : row.paymentStatus === "overdue"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {row.paymentStatus}
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-sm font-medium text-zinc-900">
-                  {row.deliveredAt ? new Date(row.deliveredAt).toLocaleString() : "—"}
+                  {row.deliveredAt ? new Date(row.deliveredAt).toLocaleDateString() : "—"}
                 </td>
               </tr>
             ))}
