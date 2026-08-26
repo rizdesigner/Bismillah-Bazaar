@@ -24,6 +24,12 @@ type ClientOverride = {
   item: InventoryItem;
 };
 
+type PendingChange = {
+  itemId: string;
+  customPriceKg: number | null;
+  isAvailable: boolean;
+};
+
 export function ClientPricingManager({
   customers,
   inventory,
@@ -34,7 +40,9 @@ export function ClientPricingManager({
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [overrides, setOverrides] = useState<ClientOverride[]>([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState<Record<string, PendingChange>>({});
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedCustomerId) {
@@ -42,6 +50,8 @@ export function ClientPricingManager({
     } else {
       setOverrides([]);
     }
+    setPendingChanges({});
+    setStatusMsg(null);
   }, [selectedCustomerId]);
 
   async function fetchOverrides(userId: string) {
@@ -59,43 +69,66 @@ export function ClientPricingManager({
     }
   }
 
-  async function handleSaveOverride(
-    itemId: string,
-    customPriceKg: number | null,
-    isAvailable: boolean
-  ) {
+  function updatePending(itemId: string, field: "customPriceKg" | "isAvailable", value: number | null | boolean) {
+    const override = overridesMap.get(itemId);
+    const base: PendingChange = pendingChanges[itemId] ?? {
+      itemId,
+      customPriceKg: override?.customPriceKg ?? null,
+      isAvailable: override?.isAvailable ?? true,
+    };
+    setPendingChanges((prev) => ({
+      ...prev,
+      [itemId]: { ...base, [field]: value },
+    }));
+  }
+
+  function getEffective(itemId: string): { price: number | null; available: boolean } {
+    const override = overridesMap.get(itemId);
+    const pending = pendingChanges[itemId];
+    return {
+      price: pending?.customPriceKg !== undefined ? pending.customPriceKg : (override?.customPriceKg ?? null),
+      available: pending?.isAvailable !== undefined ? pending.isAvailable : (override?.isAvailable ?? true),
+    };
+  }
+
+  async function handleSaveAll() {
     if (!selectedCustomerId) return;
+    setSaving(true);
+    setStatusMsg(null);
 
-    setSaving(itemId);
+    const entries = Object.values(pendingChanges);
+    if (entries.length === 0) {
+      setSaving(false);
+      return;
+    }
+
     try {
-      const res = await fetch("/api/admin/client-overrides", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: selectedCustomerId,
-          itemId,
-          customPriceKg,
-          isAvailable,
-        }),
-      });
-
-      if (res.ok) {
-        await fetchOverrides(selectedCustomerId);
+      for (const change of entries) {
+        await fetch("/api/admin/client-overrides", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: selectedCustomerId,
+            itemId: change.itemId,
+            customPriceKg: change.customPriceKg,
+            isAvailable: change.isAvailable,
+          }),
+        });
       }
+
+      setPendingChanges({});
+      setStatusMsg("Changes saved successfully");
+      await fetchOverrides(selectedCustomerId);
     } catch (error) {
-      console.error("Failed to save override:", error);
+      console.error("Failed to save overrides:", error);
+      setStatusMsg("Failed to save changes");
     } finally {
-      setSaving(null);
+      setSaving(false);
     }
   }
 
   const overridesMap = new Map(overrides.map((o) => [o.itemId, o]));
-  const [pendingPrices, setPendingPrices] = useState<Record<string, string>>({});
-
-  function getPendingPrice(itemId: string, basePrice: number, customPrice: number | null): string {
-    if (pendingPrices[itemId] !== undefined) return pendingPrices[itemId];
-    return customPrice != null ? customPrice.toString() : "";
-  }
+  const hasChanges = Object.keys(pendingChanges).length > 0;
 
   return (
     <div className="space-y-4">
@@ -133,80 +166,74 @@ export function ClientPricingManager({
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent"></div>
             </div>
           ) : (
-            <div className="divide-y divide-zinc-100">
-              {inventory.map((item) => {
-                const override = overridesMap.get(item.id);
-                const customPrice = override?.customPriceKg ?? null;
-                const isAvailable = override?.isAvailable ?? true;
+            <>
+              <div className="divide-y divide-zinc-100">
+                {inventory.map((item) => {
+                  const effective = getEffective(item.id);
+                  const priceStr = effective.price != null ? effective.price.toString() : "";
 
-                return (
-                  <div key={item.id} className="px-4 py-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-zinc-900">
-                          {item.itemName}
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          Base price: ${item.basePriceKg.toFixed(2)}/lb
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs text-zinc-600">
-                            Custom Price:
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder={item.basePriceKg.toFixed(2)}
-                            value={getPendingPrice(item.id, item.basePriceKg, customPrice)}
-                            onChange={(e) => {
-                              setPendingPrices((prev) => ({ ...prev, [item.id]: e.target.value }));
-                            }}
-                            onBlur={() => {
-                              const val = pendingPrices[item.id];
-                              if (val !== undefined) {
-                                const newPrice = val === "" ? null : parseFloat(val);
-                                if (newPrice !== customPrice) {
-                                  handleSaveOverride(item.id, newPrice, isAvailable);
-                                }
-                                setPendingPrices((prev) => {
-                                  const next = { ...prev };
-                                  delete next[item.id];
-                                  return next;
-                                });
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                            }}
-                            disabled={saving === item.id}
-                            className="w-24 rounded border border-zinc-300 px-2 py-1 text-sm disabled:opacity-50"
-                          />
+                  return (
+                    <div key={item.id} className="px-4 py-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-zinc-900">
+                            {item.itemName}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            Base price: ${item.basePriceKg.toFixed(2)}/lb
+                          </p>
                         </div>
-                        <label className="flex items-center gap-1.5">
-                          <input
-                            type="checkbox"
-                            checked={isAvailable}
-                            onChange={(e) => {
-                              handleSaveOverride(
-                                item.id,
-                                customPrice ?? null,
-                                e.target.checked
-                              );
-                            }}
-                            disabled={saving === item.id}
-                            className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
-                          />
-                          <span className="text-xs text-zinc-600">Visible</span>
-                        </label>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-zinc-600">
+                              Custom Price:
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder={item.basePriceKg.toFixed(2)}
+                              value={priceStr}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updatePending(item.id, "customPriceKg", val === "" ? null : parseFloat(val));
+                              }}
+                              className="w-24 rounded border border-zinc-300 px-2 py-1 text-sm"
+                            />
+                          </div>
+                          <label className="flex items-center gap-1.5">
+                            <input
+                              type="checkbox"
+                              checked={effective.available}
+                              onChange={(e) => {
+                                updatePending(item.id, "isAvailable", e.target.checked);
+                              }}
+                              className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                            <span className="text-xs text-zinc-600">Visible</span>
+                          </label>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+
+              <div className="border-t border-zinc-200 px-4 py-3">
+                {statusMsg && (
+                  <p className={`mb-2 text-xs font-medium ${statusMsg.includes("Failed") ? "text-red-600" : "text-emerald-600"}`}>
+                    {statusMsg}
+                  </p>
+                )}
+                <button
+                  onClick={handleSaveAll}
+                  disabled={!hasChanges || saving}
+                  className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {saving ? "Saving..." : hasChanges ? `Save Changes (${Object.keys(pendingChanges).length})` : "No Changes"}
+                </button>
+              </div>
+            </>
           )}
         </div>
       )}
