@@ -44,28 +44,47 @@ export default function MessagesPage() {
   }, [supabaseRef]);
 
   const initConversation = useCallback(async () => {
-    const supabase = getSupabase();
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const supabase = getSupabase();
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-    let { data: conv } = await supabase
-      .from("conversations")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!conv) {
-      const { data: newConv } = await supabase
+      let { data: conv, error } = await supabase
         .from("conversations")
-        .insert({ user_id: user.id })
-        .select()
+        .select("*")
+        .eq("user_id", user.id)
         .single();
-      conv = newConv;
-    }
 
-    setConversation(conv);
-    setLoading(false);
+      if (error && error.code === 'PGRST116') {
+        // No conversation found, create one
+        const { data: newConv, error: insertError } = await supabase
+          .from("conversations")
+          .insert({ user_id: user.id })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error("Failed to create conversation:", insertError);
+          setLoading(false);
+          return;
+        }
+        conv = newConv;
+      } else if (error) {
+        console.error("Failed to fetch conversation:", error);
+        setLoading(false);
+        return;
+      }
+
+      setConversation(conv);
+    } catch (err) {
+      console.error("initConversation error:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [getSupabase]);
 
   const fetchMessages = useCallback(async () => {
