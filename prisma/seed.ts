@@ -37,22 +37,22 @@ async function main() {
 
   type SeedInventory = {
     itemName: string;
-    category: "Poultry" | "Meat" | "Dried";
+    category: string;
     basePriceKg: number;
     inStock?: boolean;
   };
 
   const inventoryData: SeedInventory[] = [
-    { itemName: "Chicken Breast", category: "Poultry", basePriceKg: 6.5 },
-    { itemName: "Chicken Thigh", category: "Poultry", basePriceKg: 4.8 },
-    { itemName: "Whole Chicken", category: "Poultry", basePriceKg: 3.9 },
-    { itemName: "Chicken Wings", category: "Poultry", basePriceKg: 4.2 },
-    { itemName: "Lamb Chops", category: "Meat", basePriceKg: 14.5 },
-    { itemName: "Lamb Mince", category: "Meat", basePriceKg: 11.0 },
-    { itemName: "Beef Mince", category: "Meat", basePriceKg: 8.9 },
-    { itemName: "Beef Steak", category: "Meat", basePriceKg: 16.5 },
-    { itemName: "Beef Jerky", category: "Dried", basePriceKg: 18.0 },
-    { itemName: "Dried Sausage", category: "Dried", basePriceKg: 15.5, inStock: false },
+    { itemName: "Chicken Breast", category: "Chicken", basePriceKg: 6.5 },
+    { itemName: "Chicken Thigh", category: "Chicken", basePriceKg: 4.8 },
+    { itemName: "Whole Chicken", category: "Chicken", basePriceKg: 3.9 },
+    { itemName: "Chicken Wings", category: "Chicken", basePriceKg: 4.2 },
+    { itemName: "Lamb Chops", category: "Lamb", basePriceKg: 14.5 },
+    { itemName: "Lamb Mince", category: "Lamb", basePriceKg: 11.0 },
+    { itemName: "Beef Mince", category: "Beef", basePriceKg: 8.9 },
+    { itemName: "Beef Steak", category: "Beef", basePriceKg: 16.5 },
+    { itemName: "Beef Jerky", category: "Beef", basePriceKg: 18.0 },
+    { itemName: "Dried Sausage", category: "Beef", basePriceKg: 15.5, inStock: false },
   ];
 
   const inventory: { id: string; itemName: string }[] = [];

@@ -140,7 +140,7 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [form, setForm] = useState({
     itemName: "",
-    category: "Poultry",
+    category: "Chicken",
     basePriceKg: "",
     imageUrl: "",
     inStock: true,
@@ -179,7 +179,7 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
       setEditingItem(null);
       setForm({
         itemName: "",
-        category: "Poultry",
+        category: "Chicken",
         basePriceKg: "",
         imageUrl: "",
         inStock: true,
@@ -233,7 +233,7 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
           setEditingItem(null);
           setForm({
             itemName: "",
-            category: "Poultry",
+            category: "Chicken",
             basePriceKg: "",
             imageUrl: "",
             inStock: true,
@@ -292,9 +292,11 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
                     }
                     className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
                   >
-                    <option value="Poultry">Poultry</option>
-                    <option value="Meat">Meat</option>
-                    <option value="Dried">Dried</option>
+                    <option value="Chicken">Chicken</option>
+                    <option value="Beef">Beef</option>
+                    <option value="Goat">Goat</option>
+                    <option value="Lamb">Lamb</option>
+                    <option value="Fish">Fish</option>
                   </select>
                 </div>
 

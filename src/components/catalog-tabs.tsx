@@ -14,10 +14,11 @@ type InventoryItem = {
   availableChunkSizes?: string[];
 };
 
-const categories = ["Chicken", "Beef", "Goat", "Lamb", "Mixed"] as const;
-
 export function CatalogTabs({ inventory }: { inventory: InventoryItem[] }) {
-  const [activeCategory, setActiveCategory] = useState<string>("Chicken");
+  const categories = [...new Set(inventory.map((item) => item.category))].sort();
+  const [activeCategory, setActiveCategory] = useState<string>(
+    categories[0] ?? "Poultry"
+  );
 
   const filtered = inventory.filter((item) => item.category === activeCategory);
 

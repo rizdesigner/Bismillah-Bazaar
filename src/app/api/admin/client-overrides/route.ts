@@ -27,12 +27,15 @@ export async function GET(req: NextRequest) {
     const { data: overrides, error } = await supabase
       .from('client_product_overrides')
       .select('*, item:inventory(id, item_name, category, base_price_kg, in_stock)')
-      .eq('user_id', userId)
-      .order('item(item_name)', { ascending: true });
+      .eq('user_id', userId);
 
     if (error) throw error;
 
-    const serialized = (overrides || []).map((o: any) => ({
+    const sorted = (overrides || []).sort((a: any, b: any) =>
+      (a.item?.item_name ?? '').localeCompare(b.item?.item_name ?? '')
+    );
+
+    const serialized = sorted.map((o: any) => ({
       ...o,
       customPriceKg: o.custom_price_kg ? Number(o.custom_price_kg) : null,
       item: {
