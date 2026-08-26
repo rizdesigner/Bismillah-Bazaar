@@ -43,13 +43,22 @@ export default function MessagesPage() {
     return supabaseRef.current;
   }, [supabaseRef]);
 
+  const [error, setError] = useState<string | null>(null);
+
   const initConversation = useCallback(async () => {
+    let cancelled = false;
     try {
       const supabase = getSupabase();
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      setError(null);
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        if (!cancelled) { setError("Auth error: " + authError.message); setLoading(false); }
+        return;
+      }
       if (!user) {
-        setLoading(false);
+        if (!cancelled) { setError("Not logged in"); setLoading(false); }
         return;
       }
 
@@ -59,32 +68,34 @@ export default function MessagesPage() {
         .eq("user_id", user.id)
         .single();
 
-      if (error && error.code === 'PGRST116') {
-        // No conversation found, create one
-        const { data: newConv, error: insertError } = await supabase
-          .from("conversations")
-          .insert({ user_id: user.id })
-          .select()
-          .single();
-        
-        if (insertError) {
-          console.error("Failed to create conversation:", insertError);
-          setLoading(false);
+      if (error) {
+        console.log("Conversation fetch error:", error.code, error.message);
+        if (error.code === 'PGRST116') {
+          const { data: newConv, error: insertError } = await supabase
+            .from("conversations")
+            .insert({ user_id: user.id })
+            .select()
+            .single();
+          if (insertError) {
+            if (!cancelled) { setError("Cannot create conversation: " + insertError.message); setLoading(false); }
+            return;
+          }
+          conv = newConv;
+        } else {
+          if (!cancelled) { setError("Database error: " + error.message); setLoading(false); }
           return;
         }
-        conv = newConv;
-      } else if (error) {
-        console.error("Failed to fetch conversation:", error);
-        setLoading(false);
-        return;
       }
 
-      setConversation(conv);
-    } catch (err) {
+      if (!cancelled) {
+        setConversation(conv);
+        setLoading(false);
+      }
+    } catch (err: any) {
       console.error("initConversation error:", err);
-    } finally {
-      setLoading(false);
+      if (!cancelled) { setError(err.message || "Unknown error"); setLoading(false); }
     }
+    return () => { cancelled = true; };
   }, [getSupabase]);
 
   const fetchMessages = useCallback(async () => {
@@ -125,7 +136,8 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      initConversation();
+      const cleanup = initConversation();
+      return cleanup;
     }
   }, [initConversation]);
 
@@ -150,7 +162,18 @@ export default function MessagesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-sm text-zinc-500">Loading...</p>
+        <p className="text-sm text-zinc-500">Loading messages...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <p className="text-sm font-medium text-red-600">{error}</p>
+        <p className="mt-2 text-xs text-zinc-500">
+          The messaging tables may not exist yet. Please contact support.
+        </p>
       </div>
     );
   }
