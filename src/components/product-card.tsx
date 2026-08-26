@@ -33,6 +33,7 @@ export function ProductCard({ product }: { product: Product }) {
     : product.priceKg;
 
   const handleDecrease = () => {
+    console.log('Decrease clicked:', product.itemName, 'qty:', qty);
     if (qty >= 1) {
       updateQty(product.id, selectedPieceSize?.id, qty - 1);
     } else if (qty > 0) {
@@ -41,6 +42,7 @@ export function ProductCard({ product }: { product: Product }) {
   };
 
   const handleIncrease = () => {
+    console.log('Increase clicked:', product.itemName);
     if (!selectedSize) return;
     addItem(
       {

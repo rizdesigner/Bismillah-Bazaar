@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { ProductCard } from "./product-card";
 
+type PieceSize = {
+  id: string;
+  sizeLabel: string;
+  sizeValue: number;
+  sizeUnit: string;
+};
+
 type InventoryItem = {
   id: string;
   itemName: string;
@@ -11,6 +18,7 @@ type InventoryItem = {
   priceKg: number;
   hasCustomPrice: boolean;
   imageUrl: string | null;
+  pieceSizes?: PieceSize[];
 };
 
 const categories = ["Poultry", "Meat", "Dried"] as const;

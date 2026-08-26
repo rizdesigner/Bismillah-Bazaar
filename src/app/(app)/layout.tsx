@@ -10,7 +10,7 @@ export default function AppLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <CartProvider>
-      <div className="flex min-h-dvh w-full flex-col bg-red-500">
+      <div className="flex min-h-dvh w-full flex-col bg-zinc-50">
         <AppHeader />
         <main className="flex-1 px-4 pb-32 pt-4 sm:px-6 lg:px-8">{children}</main>
         <BottomTabBar />
