@@ -24,7 +24,26 @@ function basewrap(title: string, body: string) {
   `
 }
 
-// ── Account Emails ──────────────────────────────────────────
+export async function sendPasswordResetEmail(email: string, resetUrl: string) {
+  const resend = getResend()
+  if (!resend) return
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: 'Reset your Bismillah Bazaar password',
+      html: basewrap('Reset Password', `
+        <p style="font-size: 15px;">You requested to reset your password. Click the button below to set a new password:</p>
+        <a href="${resetUrl}" style="display: inline-block; background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-size: 14px;">Reset Password</a>
+        <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
+        <p style="color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+      `),
+    })
+  } catch (error) {
+    console.error('Failed to send password reset email:', error)
+  }
+}
 
 export async function sendAccountApprovedEmail(email: string, restaurantName: string) {
   const resend = getResend()
@@ -68,8 +87,6 @@ export async function sendAccountRejectedEmail(email: string, restaurantName: st
   }
 }
 
-// ── Registration → Admin ────────────────────────────────────
-
 export async function sendNewRegistrationEmail(
   adminEmails: string[],
   restaurantName: string,
@@ -104,8 +121,6 @@ export async function sendNewRegistrationEmail(
     console.error('Failed to send new registration email:', error)
   }
 }
-
-// ── Order Emails ────────────────────────────────────────────
 
 export async function sendOrderPlacedEmail(
   email: string,
@@ -237,8 +252,6 @@ export async function sendOrderModifiedEmail(
     console.error('Failed to send order modified email:', error)
   }
 }
-
-// ── Delivery Receipt (existing) ─────────────────────────────
 
 export async function sendDeliveryReceipt(
   email: string,
