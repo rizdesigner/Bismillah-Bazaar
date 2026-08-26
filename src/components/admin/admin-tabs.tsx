@@ -647,7 +647,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                   {row.restaurantName}
                 </h4>
                 <p className="mt-0.5 text-xs text-zinc-600">{row.itemName}</p>
-                <p className="mt-2 space-y-0.5 text-[10px] text-zinc-600">
+                <div className="mt-2 space-y-0.5 text-[10px] text-zinc-600">
                   <p>Qty: {row.quantity}kg {row.fulfilledQty !== row.quantity && `→ ${row.fulfilledQty}kg`}</p>
                   <p>Price: {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}</p>
                   {row.requestedEta && <p>Req: {new Date(row.requestedEta).toLocaleString()}</p>}
