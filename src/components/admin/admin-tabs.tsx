@@ -293,7 +293,7 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
 
                 <div>
                   <label className="block text-xs font-medium text-zinc-700 sm:text-sm">
-                    Base Price ($/kg)
+                    Base Price ($/lb)
                   </label>
                   <input
                     type="number"
@@ -389,7 +389,7 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
                   {item.itemName}
                 </h4>
                 <p className="mt-0.5 text-xs text-emerald-600 font-medium">
-                  ${item.basePriceKg.toFixed(2)}/kg
+                  ${item.basePriceKg.toFixed(2)}/lb
                 </p>
               </div>
               <div className="flex gap-2">
@@ -423,7 +423,7 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
                 Product Name
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                Price/kg
+                Price/lb
               </th>
               <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 In Stock
@@ -648,7 +648,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 </h4>
                 <p className="mt-0.5 text-xs text-zinc-600">{row.itemName}</p>
                 <div className="mt-2 space-y-0.5 text-[10px] text-zinc-600">
-                  <p>Qty: {row.quantity}kg {row.fulfilledQty !== row.quantity && `→ ${row.fulfilledQty}kg`}</p>
+                  <p>Qty: {row.quantity}lb {row.fulfilledQty !== row.quantity && `→ ${row.fulfilledQty}lb`}</p>
                   <p>Price: {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}</p>
                   {row.requestedEta && <p>Req: {new Date(row.requestedEta).toLocaleString()}</p>}
                   {row.adminEta && <p className="font-medium text-emerald-700">Admin: {new Date(row.adminEta).toLocaleString()}</p>}
@@ -703,7 +703,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 Item
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                Qty (kg)
+                Qty (lb)
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Final Price
@@ -844,7 +844,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                           {item.item.itemName}
                         </p>
                         <p className="text-[10px] text-zinc-500 sm:text-xs">
-                          Requested: {item.requestedKg} kg
+                           Requested: {item.requestedKg} lb
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -891,7 +891,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                         >
                           +
                         </button>
-                        <span className="text-[10px] text-zinc-500 sm:text-xs">kg</span>
+                        <span className="text-[10px] text-zinc-500 sm:text-xs">lb</span>
                       </div>
                     </div>
                   ))}
@@ -1011,8 +1011,8 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
       "Delivered",
       "Restaurant",
       "Item",
-      "Qty Requested (kg)",
-      "Qty Fulfilled (kg)",
+      "Qty Requested (lb)",
+      "Qty Fulfilled (lb)",
       "Unit Price",
       "Total",
       "Payment Status",
@@ -1135,7 +1135,7 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
                 </h4>
                 <p className="mt-0.5 text-xs text-zinc-600">{row.itemName}</p>
                 <div className="mt-2 space-y-0.5 text-[10px] text-zinc-600">
-                  <p>Qty: {row.quantity}kg{row.fulfilledQty !== row.quantity && ` → ${row.fulfilledQty}kg`}</p>
+                   <p>Qty: {row.quantity}lb{row.fulfilledQty !== row.quantity && ` → ${row.fulfilledQty}lb`}</p>
                   <p>Price: {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}</p>
                   <p>Delivered: {row.deliveredAt ? new Date(row.deliveredAt).toLocaleDateString() : "—"}</p>
                 </div>
@@ -1160,7 +1160,7 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
                 Item
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                Qty (kg)
+                Qty (lb)
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Final Price

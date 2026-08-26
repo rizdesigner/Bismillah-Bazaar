@@ -141,7 +141,7 @@ export function ClientPricingManager({
                           {item.itemName}
                         </p>
                         <p className="text-xs text-zinc-500">
-                          Base price: ${item.basePriceKg.toFixed(2)}/kg
+                          Base price: ${item.basePriceKg.toFixed(2)}/lb
                         </p>
                       </div>
                       <div className="flex items-center gap-3">

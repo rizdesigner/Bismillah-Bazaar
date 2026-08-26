@@ -244,10 +244,10 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                       {item.item.itemName}
                     </span>
                     <div className="flex items-center gap-4 text-zinc-600">
-                      <span>Requested: {item.requestedKg} kg</span>
+                      <span>Requested: {item.requestedKg} lb</span>
                       {item.fulfilledKg !== null && item.fulfilledKg !== item.requestedKg && (
                         <span className="font-medium text-emerald-700">
-                          Approved: {item.fulfilledKg} kg
+                           Approved: {item.fulfilledKg} lb
                         </span>
                       )}
                     </div>
@@ -325,10 +325,10 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                       {item.item.itemName}
                     </span>
                     <div className="flex items-center gap-4 text-zinc-600">
-                      <span>Requested: {item.requestedKg} kg</span>
+                      <span>Requested: {item.requestedKg} lb</span>
                       {item.fulfilledKg !== null && item.fulfilledKg !== item.requestedKg && (
                         <span className="font-medium text-emerald-700">
-                          Delivered: {item.fulfilledKg} kg
+                          Delivered: {item.fulfilledKg} lb
                         </span>
                       )}
                     </div>
@@ -396,7 +396,7 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                       {item.itemName}
                     </p>
                     <p className="text-[10px] text-zinc-500 sm:text-xs">
-                      ${(inventory.find((i) => i.id === item.itemId)?.basePriceKg ?? 0).toFixed(2)}/kg
+                      ${(inventory.find((i) => i.id === item.itemId)?.basePriceKg ?? 0).toFixed(2)}/lb
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -453,7 +453,7 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                   <option value="">Add an item...</option>
                   {availableItems.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.itemName} — ${item.basePriceKg.toFixed(2)}/kg
+                      {item.itemName} — ${item.basePriceKg.toFixed(2)}/lb
                     </option>
                   ))}
                 </select>

@@ -29,7 +29,7 @@ export function ProductCard({ product }: { product: Product }) {
   const selectedPieceSize = cartItem?.pieceSize;
 
   const effectivePrice = selectedPieceSize
-    ? product.priceKg * (selectedPieceSize.sizeValue / 1000)
+    ? product.priceKg * (selectedPieceSize.sizeValue / 453.592)
     : product.priceKg;
 
   const handleDecrease = () => {
@@ -94,7 +94,7 @@ export function ProductCard({ product }: { product: Product }) {
       <p className="mt-1 text-base font-bold text-emerald-600 sm:text-lg">
         ${effectivePrice.toFixed(2)}
         <span className="text-xs font-normal text-zinc-500 sm:text-sm">
-          {selectedPieceSize ? `/ ${selectedPieceSize.sizeLabel}` : "/kg"}
+          {selectedPieceSize ? `/ ${selectedPieceSize.sizeLabel}` : "/lb"}
         </span>
       </p>
       {product.hasCustomPrice && (
@@ -133,7 +133,7 @@ export function ProductCard({ product }: { product: Product }) {
             {qty > 0 && selectedPieceSize
               ? `${qty} × ${selectedPieceSize.sizeLabel}`
               : qty > 0
-              ? `${qty} kg`
+              ? `${qty} lb`
               : "0"}
           </span>
           <button

@@ -123,7 +123,7 @@ export function OrderEditModal({
                         {orderItem.item.itemName}
                       </p>
                       <p className="text-xs text-zinc-500">
-                        Requested: {orderItem.requestedKg} kg
+                         Requested: {orderItem.requestedKg} lb
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -144,7 +144,7 @@ export function OrderEditModal({
                         }}
                         className="w-20 rounded border border-zinc-300 px-2 py-1 text-sm"
                       />
-                      <span className="text-xs text-zinc-500">kg</span>
+                      <span className="text-xs text-zinc-500">lb</span>
                     </div>
                   </div>
                 );

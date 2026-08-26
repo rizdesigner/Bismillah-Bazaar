@@ -44,7 +44,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
   const total = items.reduce((sum, i) => {
-    const weightKg = i.pieceSize ? (i.quantity * i.pieceSize.sizeValue) / 1000 : i.quantity;
+    const weightKg = i.pieceSize ? (i.quantity * i.pieceSize.sizeValue) / 453.592 : i.quantity;
     return sum + weightKg * i.basePriceKg;
   }, 0);
 

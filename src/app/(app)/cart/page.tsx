@@ -71,7 +71,7 @@ export default function CartPage() {
         {items.map((item) => {
           const isPiece = !!item.pieceSize;
           const weightKg = isPiece && item.pieceSize
-            ? (item.quantity * item.pieceSize.sizeValue) / 1000
+            ? (item.quantity * item.pieceSize.sizeValue) / 453.592
             : item.quantity;
           const itemTotal = weightKg * item.basePriceKg;
           const increment = isPiece ? 1 : 0.5;
@@ -85,7 +85,7 @@ export default function CartPage() {
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-zinc-900 sm:text-base">{item.itemName}</p>
                   <p className="text-xs text-zinc-500 sm:text-sm">
-                    ${item.basePriceKg.toFixed(2)}/kg
+                    ${item.basePriceKg.toFixed(2)}/lb
                     {item.pieceSize && ` · ${item.pieceSize.sizeLabel}`}
                   </p>
                 </div>
@@ -99,7 +99,7 @@ export default function CartPage() {
                   <span className="w-16 text-center text-xs font-medium sm:w-20 sm:text-sm">
                     {isPiece && item.pieceSize
                       ? `${item.quantity} × ${item.pieceSize.sizeLabel}`
-                      : `${item.quantity} kg`}
+                      : `${item.quantity} lb`}
                   </span>
                   <button
                     onClick={() => updateQty(item.itemId, item.pieceSize?.id, item.quantity + increment)}
@@ -118,7 +118,7 @@ export default function CartPage() {
               <p className="mt-2 text-right text-xs font-medium text-emerald-700 sm:text-sm">
                 ${itemTotal.toFixed(2)}
                 <span className="ml-1 text-zinc-400">
-                  ({weightKg.toFixed(3)} kg)
+                  ({weightKg.toFixed(3)} lb)
                 </span>
               </p>
             </div>

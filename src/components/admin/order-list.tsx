@@ -107,10 +107,10 @@ export function OrderList({ orders }: { orders: Order[] }) {
                   </span>
                   <div className="flex items-center gap-4 text-zinc-600">
                     <span>
-                      Requested: {item.requestedKg} kg
+                      Requested: {item.requestedKg} lb
                     </span>
                     <span className="font-medium text-emerald-700">
-                      Fulfilled: {item.fulfilledKg ?? "—"} kg
+                      Fulfilled: {item.fulfilledKg ?? "—"} lb
                     </span>
                   </div>
                 </div>

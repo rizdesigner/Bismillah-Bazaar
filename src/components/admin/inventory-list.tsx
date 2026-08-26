@@ -157,7 +157,7 @@ export function InventoryList({ items }: { items: InventoryItem[] }) {
 
               <div>
                 <label className="block text-sm font-medium text-zinc-700">
-                  Base Price ($/kg)
+                  Base Price ($/lb)
                 </label>
                 <input
                   type="number"
@@ -236,7 +236,7 @@ export function InventoryList({ items }: { items: InventoryItem[] }) {
                 Category
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase text-zinc-600">
-                Price/kg
+                Price/lb
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase text-zinc-600">
                 Status

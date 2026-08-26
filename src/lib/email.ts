@@ -47,8 +47,8 @@ export async function sendDeliveryReceipt(
         (item) => `
         <tr>
           <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.item.item_name || item.itemName}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.requested_kg || item.requestedKg} kg</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.fulfilled_kg || item.fulfilledKg || item.requested_kg || item.requestedKg} kg</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.requested_kg || item.requestedKg} lb</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.fulfilled_kg || item.fulfilledKg || item.requested_kg || item.requestedKg} lb</td>
         </tr>
       `
       )

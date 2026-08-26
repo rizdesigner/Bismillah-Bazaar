@@ -49,7 +49,7 @@ export async function PATCH(
       for (const item of items) {
         const orderItem = order.items.find((oi: any) => oi.id === item.id);
         if (orderItem && Number(orderItem.fulfilled_kg ?? orderItem.requested_kg) !== item.fulfilledKg) {
-          changes.push(`${orderItem.item.item_name}: ${Number(orderItem.requested_kg)}kg → ${item.fulfilledKg}kg`);
+          changes.push(`${orderItem.item.item_name}: ${Number(orderItem.requested_kg)}lb → ${item.fulfilledKg}kg`);
         }
         await supabase.from('order_items').update({ fulfilled_kg: item.fulfilledKg }).eq('id', item.id);
       }

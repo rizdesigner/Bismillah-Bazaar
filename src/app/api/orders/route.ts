@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
       if (item.pieceSizeId) {
         const ps = pieceSizeMap.get(item.pieceSizeId);
         if (ps) {
-          weightKg = (Number(item.requestedKg) * ps.size_value) / 1000;
+          weightKg = (Number(item.requestedKg) * ps.size_value) / 453.592;
         }
       }
 
