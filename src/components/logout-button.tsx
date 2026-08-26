@@ -1,6 +1,5 @@
 "use client";
 
-import { createClient } from "@/lib/supabase-client";
 import { useState } from "react";
 
 export function LogoutButton() {
@@ -9,10 +8,9 @@ export function LogoutButton() {
   const handleLogout = async () => {
     setLoading(true);
     try {
-      const supabase = createClient();
-      await supabase.auth.signOut();
+      await fetch("/api/auth/logout", { method: "POST" });
     } catch (err) {
-      console.error("Sign out error:", err);
+      console.error("Logout error:", err);
     }
     window.location.href = "/";
   };

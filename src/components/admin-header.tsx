@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { useSession } from "./session-provider";
-import { createClient } from "@/lib/supabase-client";
-import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 
 type Notification = {
@@ -17,7 +15,6 @@ type Notification = {
 };
 
 export function AdminHeader() {
-  const router = useRouter();
   const { profile } = useSession();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -72,8 +69,11 @@ export function AdminHeader() {
   };
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.error("Sign out error:", err);
+    }
     window.location.href = "/login";
   };
 

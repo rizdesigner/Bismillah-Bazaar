@@ -1,15 +1,12 @@
 "use client";
 
 import { useSession } from "./session-provider";
-import { createClient } from "@/lib/supabase-client";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { NotificationBell } from "./notification-bell";
 import { InstallButton } from "./install-button";
 
 export function AppHeader() {
-  const router = useRouter();
   const { profile } = useSession();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -29,13 +26,11 @@ export function AppHeader() {
 
   const handleSignOut = async (redirectUrl: string) => {
     try {
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      window.location.href = redirectUrl;
+      await fetch("/api/auth/logout", { method: "POST" });
     } catch (err) {
       console.error("Sign out error:", err);
-      window.location.href = redirectUrl;
     }
+    window.location.href = redirectUrl;
   };
 
   return (
