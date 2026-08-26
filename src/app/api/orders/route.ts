@@ -3,6 +3,7 @@ export const runtime = 'edge';
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
 import { generateOrderNumber } from "@/lib/order-number";
+import { sendOrderPlacedEmail, sendNewOrderAlertEmail } from "@/lib/email";
 
 function parseChunkGrams(chunkSize: string): number | null {
   const match = chunkSize.match(/(\d+(?:\.\d+)?)\s*g/i);
@@ -137,6 +138,20 @@ export async function POST(req: NextRequest) {
       .insert(orderItems);
 
     if (itemsError) throw itemsError;
+
+    const { data: customerProfile } = await supabase
+      .from('users')
+      .select('restaurant_name')
+      .eq('id', user.id)
+      .single();
+
+    const itemDetails = validatedItems.map((item) => {
+      const inv = inventoryMap[item.itemId];
+      return { name: inv?.item_name || item.itemId, quantity: item.requestedLb };
+    });
+
+    sendOrderPlacedEmail(user.email, customerProfile?.restaurant_name || '', orderNumber, itemDetails, estimatedTotal);
+    sendNewOrderAlertEmail(['admin@bismillahbazaar.com'], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, estimatedTotal);
 
     return NextResponse.json({ orderId: order.id });
   } catch (error) {

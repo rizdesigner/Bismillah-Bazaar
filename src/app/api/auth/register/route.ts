@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
+import { sendNewRegistrationEmail } from '@/lib/email';
 
 export async function POST(req: Request) {
   try {
@@ -43,6 +44,16 @@ export async function POST(req: Request) {
         { error: 'Failed to create profile' },
         { status: 500 }
       );
+    }
+
+    const { data: admins } = await supabase
+      .from('users')
+      .select('email')
+      .eq('role', 'admin');
+
+    const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
+    if (adminEmails.length > 0) {
+      sendNewRegistrationEmail(adminEmails, restaurantName, email, phone || null, location || null);
     }
 
     return NextResponse.json({ success: true });
