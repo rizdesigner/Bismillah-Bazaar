@@ -42,15 +42,14 @@ export function ProductCard({ product }: { product: Product }) {
   };
 
   const handleIncrease = () => {
-    console.log('Increase clicked:', product.itemName);
-    if (!selectedSize) return;
+    console.log('Increase clicked:', product.itemName, 'selectedSize:', selectedSize);
     addItem(
       {
         itemId: product.id,
         itemName: product.itemName,
         category: product.category,
         basePriceKg: product.priceKg,
-        pieceSize: selectedSize,
+        pieceSize: selectedSize || undefined,
       },
       1
     );
