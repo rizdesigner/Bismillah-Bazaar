@@ -6,13 +6,6 @@ export const metadata = { title: "Catalog" };
 
 export const dynamic = "force-dynamic";
 
-type PieceSizeItem = {
-  id: string;
-  sizeLabel: string;
-  sizeValue: number;
-  sizeUnit: string;
-};
-
 type ClientOverride = {
   item_id: string;
   custom_price_kg: number | null;
@@ -28,24 +21,6 @@ export default async function CatalogPage() {
     .select("*")
     .eq("in_stock", true)
     .order("item_name");
-
-  const { data: allPieceSizes } = await supabase
-    .from("piece_sizes")
-    .select("*")
-    .order("size_value");
-
-  const pieceSizesMap = new Map<string, PieceSizeItem[]>();
-  for (const ps of allPieceSizes ?? []) {
-    if (!pieceSizesMap.has(ps.item_id)) {
-      pieceSizesMap.set(ps.item_id, []);
-    }
-    pieceSizesMap.get(ps.item_id)!.push({
-      id: ps.id,
-      sizeLabel: ps.size_label,
-      sizeValue: ps.size_value,
-      sizeUnit: ps.size_unit,
-    });
-  }
 
   let clientOverrides: ClientOverride[] = [];
   if (user) {
@@ -75,7 +50,6 @@ export default async function CatalogPage() {
         : Number(item.base_price_kg);
 
       return {
-        ...item,
         id: item.id,
         itemName: item.item_name,
         category: item.category,
@@ -85,7 +59,7 @@ export default async function CatalogPage() {
         hasCustomPrice: !!override?.custom_price_kg,
         inStock: item.in_stock,
         imageUrl: item.image_url,
-        pieceSizes: pieceSizesMap.get(item.id) ?? [],
+        availableChunkSizes: item.available_chunk_sizes ?? [],
       };
     });
 

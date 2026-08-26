@@ -6,6 +6,7 @@ type OrderItem = {
   id: string;
   requestedKg: number;
   fulfilledKg: number | null;
+  requestedChunkSize: number | null;
   item: {
     id: string;
     itemName: string;
@@ -120,7 +121,7 @@ export function OrderEditModal({
                   >
                     <div>
                       <p className="text-sm font-medium text-zinc-900">
-                        {orderItem.item.itemName}
+                        {orderItem.item.itemName}{orderItem.requestedChunkSize ? ` (${orderItem.requestedChunkSize}g)` : ""}
                       </p>
                       <p className="text-xs text-zinc-500">
                          Requested: {orderItem.requestedKg} lb

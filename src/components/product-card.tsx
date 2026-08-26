@@ -2,7 +2,6 @@
 
 import { useCart } from "./cart-provider";
 import { useState } from "react";
-import type { PieceSize } from "@/lib/cart";
 
 type Product = {
   id: string;
@@ -12,56 +11,54 @@ type Product = {
   priceKg: number;
   hasCustomPrice: boolean;
   imageUrl: string | null;
-  pieceSizes?: PieceSize[];
+  availableChunkSizes?: number[];
 };
 
 export function ProductCard({ product }: { product: Product }) {
   const { items, addItem, updateQty, removeItem } = useCart();
-  const hasSizes = product.pieceSizes && product.pieceSizes.length > 0;
-  const defaultSize = hasSizes ? product.pieceSizes![0] : null;
-  const [selectedSize, setSelectedSize] = useState<PieceSize | null>(defaultSize);
+  const chunkSizes = product.availableChunkSizes ?? [];
+  const hasSizes = chunkSizes.length > 0;
+  const [selectedChunk, setSelectedChunk] = useState<number | null>(hasSizes ? chunkSizes[0] : null);
+
   const cartItem = items.find((i) =>
-    i.pieceSize
-      ? i.itemId === product.id && i.pieceSize.id === selectedSize?.id
-      : i.itemId === product.id
+    hasSizes
+      ? i.itemId === product.id && i.chunkSize === selectedChunk
+      : i.itemId === product.id && i.chunkSize == null
   );
   const qty = cartItem?.quantity ?? 0;
-  const selectedPieceSize = cartItem?.pieceSize;
 
-  const effectivePrice = selectedPieceSize
-    ? product.priceKg * (selectedPieceSize.sizeValue / 453.592)
+  const effectivePrice = selectedChunk != null
+    ? product.priceKg * (selectedChunk / 453.592)
     : product.priceKg;
 
   const handleDecrease = () => {
-    console.log('Decrease clicked:', product.itemName, 'qty:', qty);
     if (qty >= 1) {
-      updateQty(product.id, selectedPieceSize?.id, qty - 1);
+      updateQty(product.id, selectedChunk ?? undefined, qty - 1);
     } else if (qty > 0) {
-      removeItem(product.id, selectedPieceSize?.id);
+      removeItem(product.id, selectedChunk ?? undefined);
     }
   };
 
   const handleIncrease = () => {
-    console.log('Increase clicked:', product.itemName, 'selectedSize:', selectedSize);
     addItem(
       {
         itemId: product.id,
         itemName: product.itemName,
         category: product.category,
         basePriceKg: product.priceKg,
-        pieceSize: selectedSize || undefined,
+        chunkSize: selectedChunk ?? undefined,
       },
       1
     );
   };
 
-  const handleSizeChange = (size: PieceSize) => {
-    setSelectedSize(size);
+  const handleSizeChange = (chunkSize: number) => {
+    setSelectedChunk(chunkSize);
     const existing = items.find(
-      (i) => i.itemId === product.id && i.pieceSize?.id === size.id
+      (i) => i.itemId === product.id && i.chunkSize === chunkSize
     );
     if (!existing) {
-      removeItem(product.id, selectedPieceSize?.id);
+      removeItem(product.id, selectedChunk ?? undefined);
     }
   };
 
@@ -94,7 +91,7 @@ export function ProductCard({ product }: { product: Product }) {
       <p className="mt-1 text-base font-bold text-emerald-600 sm:text-lg">
         ${effectivePrice.toFixed(2)}
         <span className="text-xs font-normal text-zinc-500 sm:text-sm">
-          {selectedPieceSize ? `/ ${selectedPieceSize.sizeLabel}` : "/lb"}
+          {selectedChunk != null ? `/ ${selectedChunk}g chunk` : "/lb"}
         </span>
       </p>
       {product.hasCustomPrice && (
@@ -105,16 +102,16 @@ export function ProductCard({ product }: { product: Product }) {
 
       {hasSizes && (
         <select
-          value={selectedSize?.id ?? ""}
+          value={selectedChunk ?? ""}
           onChange={(e) => {
-            const size = product.pieceSizes!.find((s) => s.id === e.target.value);
-            if (size) handleSizeChange(size);
+            const val = Number(e.target.value);
+            if (val) handleSizeChange(val);
           }}
           className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-xs sm:text-sm"
         >
-          {product.pieceSizes!.map((size) => (
-            <option key={size.id} value={size.id}>
-              {size.sizeLabel}
+          {chunkSizes.map((size) => (
+            <option key={size} value={size}>
+              {size}g chunks
             </option>
           ))}
         </select>
@@ -130,8 +127,8 @@ export function ProductCard({ product }: { product: Product }) {
             −
           </button>
           <span className="w-16 text-center text-xs font-medium sm:w-20 sm:text-sm">
-            {qty > 0 && selectedPieceSize
-              ? `${qty} × ${selectedPieceSize.sizeLabel}`
+            {qty > 0 && selectedChunk != null
+              ? `${qty} × ${selectedChunk}g`
               : qty > 0
               ? `${qty} lb`
               : "0"}
@@ -145,7 +142,7 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
         {qty > 0 && (
           <button
-            onClick={() => removeItem(product.id, selectedPieceSize?.id)}
+            onClick={() => removeItem(product.id, selectedChunk ?? undefined)}
             className="text-[10px] text-red-600 hover:text-red-500 sm:text-xs"
           >
             Remove

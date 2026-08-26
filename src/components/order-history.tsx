@@ -6,6 +6,7 @@ type OrderItem = {
   id: string;
   requestedKg: number;
   fulfilledKg: number | null;
+  requestedChunkSize: number | null;
   item: {
     id: string;
     itemName: string;
@@ -241,7 +242,7 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                     className="flex items-center justify-between rounded-lg bg-zinc-50 px-4 py-2 text-sm"
                   >
                     <span className="font-medium text-zinc-900">
-                      {item.item.itemName}
+                      {item.item.itemName}{item.requestedChunkSize ? ` (${item.requestedChunkSize}g)` : ""}
                     </span>
                     <div className="flex items-center gap-4 text-zinc-600">
                       <span>Requested: {item.requestedKg} lb</span>
@@ -322,7 +323,7 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                     className="flex items-center justify-between rounded-lg bg-zinc-50 px-4 py-2 text-sm"
                   >
                     <span className="font-medium text-zinc-900">
-                      {item.item.itemName}
+                      {item.item.itemName}{item.requestedChunkSize ? ` (${item.requestedChunkSize}g)` : ""}
                     </span>
                     <div className="flex items-center gap-4 text-zinc-600">
                       <span>Requested: {item.requestedKg} lb</span>

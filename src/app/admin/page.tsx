@@ -42,6 +42,7 @@ export default async function AdminPage() {
     basePriceKg: Number(item.base_price_kg),
     inStock: item.in_stock,
     imageUrl: item.image_url,
+    availableChunkSizes: item.available_chunk_sizes ?? [],
   }));
 
   const serializedOrders = orders.map((order) => ({
@@ -72,6 +73,7 @@ export default async function AdminPage() {
       itemId: oi.item_id,
       requestedKg: Number(oi.requested_kg),
       fulfilledKg: oi.fulfilled_kg ? Number(oi.fulfilled_kg) : null,
+      requestedChunkSize: oi.requested_chunk_size ?? null,
       item: {
         id: oi.inventory.id,
         itemName: oi.inventory.item_name,

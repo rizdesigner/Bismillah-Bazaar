@@ -46,19 +46,11 @@ export async function POST(req: NextRequest) {
       (clientOverrides || []).map((o: any) => [o.item_id, o])
     );
 
-    const { data: allPieceSizes } = await supabase
-      .from('piece_sizes')
-      .select('id, size_value');
-
-    const pieceSizeMap = new Map(
-      (allPieceSizes || []).map((ps: any) => [ps.id, ps])
-    );
-
     let originalTotal = 0;
     const validatedItems: {
       itemId: string;
-      pieceSizeId?: string;
-      requestedKg: number;
+      requestedChunkSize: number | null;
+      requestedLb: number;
       basePriceKg: number;
     }[] = [];
 
@@ -89,19 +81,18 @@ export async function POST(req: NextRequest) {
         ? Number(override.custom_price_kg)
         : Number(inventory.base_price_kg);
 
-      let weightKg = Number(item.requestedKg);
-      if (item.pieceSizeId) {
-        const ps = pieceSizeMap.get(item.pieceSizeId);
-        if (ps) {
-          weightKg = (Number(item.requestedKg) * ps.size_value) / 453.592;
-        }
+      const requestedChunkSize: number | null = item.chunkSize ?? null;
+      let weightLb = Number(item.requestedLb);
+
+      if (requestedChunkSize != null) {
+        weightLb = (Number(item.requestedLb) * requestedChunkSize) / 453.592;
       }
 
-      originalTotal += price * weightKg;
+      originalTotal += price * weightLb;
       validatedItems.push({
         itemId: item.itemId,
-        pieceSizeId: item.pieceSizeId || undefined,
-        requestedKg: Number(item.requestedKg),
+        requestedChunkSize,
+        requestedLb: Number(item.requestedLb),
         basePriceKg: price,
       });
     }
@@ -129,8 +120,8 @@ export async function POST(req: NextRequest) {
     const orderItems = validatedItems.map((item) => ({
       order_id: order.id,
       item_id: item.itemId,
-      piece_size_id: item.pieceSizeId || null,
-      requested_kg: item.requestedKg,
+      requested_chunk_size: item.requestedChunkSize,
+      requested_kg: item.requestedLb,
     }));
 
     const { error: itemsError } = await supabase

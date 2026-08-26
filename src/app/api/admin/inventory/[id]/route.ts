@@ -21,7 +21,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { itemName, category, basePriceKg, imageUrl, inStock } =
+    const { itemName, category, basePriceKg, imageUrl, inStock, availableChunkSizes } =
       await req.json();
 
     const { data: item, error } = await supabase
@@ -32,6 +32,7 @@ export async function PATCH(
         base_price_kg: basePriceKg,
         image_url: imageUrl || null,
         in_stock: inStock,
+        available_chunk_sizes: availableChunkSizes ?? null,
       })
       .eq('id', id)
       .select()

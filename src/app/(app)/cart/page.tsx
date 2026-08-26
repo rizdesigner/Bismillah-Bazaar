@@ -23,8 +23,8 @@ export default function CartPage() {
         body: JSON.stringify({
           items: items.map((i) => ({
             itemId: i.itemId,
-            pieceSizeId: i.pieceSize?.id || null,
-            requestedKg: i.quantity,
+            chunkSize: i.chunkSize ?? null,
+            requestedLb: i.quantity,
           })),
           requestedEta: requestedEta || null,
           note: note.trim() || null,
@@ -69,16 +69,16 @@ export default function CartPage() {
 
       <div className="mt-4 space-y-2 sm:mt-6 sm:space-y-3">
         {items.map((item) => {
-          const isPiece = !!item.pieceSize;
-          const weightKg = isPiece && item.pieceSize
-            ? (item.quantity * item.pieceSize.sizeValue) / 453.592
+          const hasChunk = item.chunkSize != null;
+          const weightLb = hasChunk
+            ? (item.quantity * item.chunkSize!) / 453.592
             : item.quantity;
-          const itemTotal = weightKg * item.basePriceKg;
-          const increment = isPiece ? 1 : 0.5;
+          const itemTotal = weightLb * item.basePriceKg;
+          const increment = hasChunk ? 1 : 0.5;
 
           return (
             <div
-              key={item.pieceSize ? `${item.itemId}::${item.pieceSize.id}` : item.itemId}
+              key={hasChunk ? `${item.itemId}::${item.chunkSize}` : item.itemId}
               className="rounded-xl border border-zinc-200 bg-white p-3 sm:p-4"
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -86,29 +86,29 @@ export default function CartPage() {
                   <p className="text-sm font-semibold text-zinc-900 sm:text-base">{item.itemName}</p>
                   <p className="text-xs text-zinc-500 sm:text-sm">
                     ${item.basePriceKg.toFixed(2)}/lb
-                    {item.pieceSize && ` · ${item.pieceSize.sizeLabel}`}
+                    {hasChunk && ` · ${item.chunkSize}g chunk`}
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   <button
-                    onClick={() => updateQty(item.itemId, item.pieceSize?.id, item.quantity - increment)}
+                    onClick={() => updateQty(item.itemId, item.chunkSize, item.quantity - increment)}
                     className="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-300 text-sm sm:h-8 sm:w-8"
                   >
                     −
                   </button>
                   <span className="w-16 text-center text-xs font-medium sm:w-20 sm:text-sm">
-                    {isPiece && item.pieceSize
-                      ? `${item.quantity} × ${item.pieceSize.sizeLabel}`
+                    {hasChunk
+                      ? `${item.quantity} × ${item.chunkSize}g`
                       : `${item.quantity} lb`}
                   </span>
                   <button
-                    onClick={() => updateQty(item.itemId, item.pieceSize?.id, item.quantity + increment)}
+                    onClick={() => updateQty(item.itemId, item.chunkSize, item.quantity + increment)}
                     className="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-300 text-sm sm:h-8 sm:w-8"
                   >
                     +
                   </button>
                   <button
-                    onClick={() => removeItem(item.itemId, item.pieceSize?.id)}
+                    onClick={() => removeItem(item.itemId, item.chunkSize)}
                     className="ml-1 text-xs text-red-600 sm:ml-2 sm:text-sm"
                   >
                     Remove
@@ -118,7 +118,7 @@ export default function CartPage() {
               <p className="mt-2 text-right text-xs font-medium text-emerald-700 sm:text-sm">
                 ${itemTotal.toFixed(2)}
                 <span className="ml-1 text-zinc-400">
-                  ({weightKg.toFixed(3)} lb)
+                  ({weightLb.toFixed(3)} lb)
                 </span>
               </p>
             </div>

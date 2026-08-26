@@ -1,17 +1,10 @@
-export type PieceSize = {
-  id: string;
-  sizeLabel: string;
-  sizeValue: number;
-  sizeUnit: string;
-};
-
 export type CartItem = {
   itemId: string;
   itemName: string;
   category: string;
   basePriceKg: number;
   quantity: number;
-  pieceSize?: PieceSize;
+  chunkSize?: number;
 };
 
 const CART_KEY = "bismillah_cart";
@@ -32,12 +25,12 @@ function saveCart(items: CartItem[]) {
 }
 
 function cartItemKey(item: CartItem): string {
-  return item.pieceSize ? `${item.itemId}::${item.pieceSize.id}` : item.itemId;
+  return item.chunkSize != null ? `${item.itemId}::${item.chunkSize}` : item.itemId;
 }
 
 export function addToCart(item: Omit<CartItem, "quantity">, quantity: number): CartItem[] {
   const cart = getCart();
-  const key = item.pieceSize ? `${item.itemId}::${item.pieceSize.id}` : item.itemId;
+  const key = item.chunkSize != null ? `${item.itemId}::${item.chunkSize}` : item.itemId;
   const existing = cart.find((i) => cartItemKey(i) === key);
   if (existing) {
     existing.quantity = Math.round((existing.quantity + quantity) * 10) / 10;
@@ -48,12 +41,12 @@ export function addToCart(item: Omit<CartItem, "quantity">, quantity: number): C
   return cart;
 }
 
-export function updateCartQty(itemId: string, pieceSizeId: string | undefined, quantity: number): CartItem[] {
+export function updateCartQty(itemId: string, chunkSize: number | undefined, quantity: number): CartItem[] {
   if (quantity <= 0) {
-    return removeFromCart(itemId, pieceSizeId);
+    return removeFromCart(itemId, chunkSize);
   }
   const cart = getCart();
-  const key = pieceSizeId ? `${itemId}::${pieceSizeId}` : itemId;
+  const key = chunkSize != null ? `${itemId}::${chunkSize}` : itemId;
   const existing = cart.find((i) => cartItemKey(i) === key);
   if (existing) {
     existing.quantity = Math.round(quantity * 10) / 10;
@@ -62,8 +55,8 @@ export function updateCartQty(itemId: string, pieceSizeId: string | undefined, q
   return cart;
 }
 
-export function removeFromCart(itemId: string, pieceSizeId?: string): CartItem[] {
-  const key = pieceSizeId ? `${itemId}::${pieceSizeId}` : itemId;
+export function removeFromCart(itemId: string, chunkSize?: number): CartItem[] {
+  const key = chunkSize != null ? `${itemId}::${chunkSize}` : itemId;
   const cart = getCart().filter((i) => cartItemKey(i) !== key);
   saveCart(cart);
   return cart;

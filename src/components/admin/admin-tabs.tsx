@@ -12,12 +12,14 @@ type InventoryItem = {
   basePriceKg: number;
   inStock: boolean;
   imageUrl: string | null;
+  availableChunkSizes?: number[];
 };
 
 type OrderItem = {
   id: string;
   requestedKg: number;
   fulfilledKg: number | null;
+  requestedChunkSize: number | null;
   item: {
     itemName: string;
   };
@@ -142,6 +144,7 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
     basePriceKg: "",
     imageUrl: "",
     inStock: true,
+    availableChunkSizes: [] as number[],
   });
   const [loading, setLoading] = useState(false);
 
@@ -162,6 +165,7 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
           ...form,
           basePriceKg: parseFloat(form.basePriceKg),
           imageUrl: form.imageUrl || null,
+          availableChunkSizes: form.availableChunkSizes,
         }),
       });
 
@@ -179,6 +183,7 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
         basePriceKg: "",
         imageUrl: "",
         inStock: true,
+        availableChunkSizes: [],
       });
       window.location.reload();
     } catch {
@@ -215,6 +220,7 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
       basePriceKg: item.basePriceKg.toString(),
       imageUrl: item.imageUrl || "",
       inStock: item.inStock,
+      availableChunkSizes: item.availableChunkSizes ?? [],
     });
     setShowForm(true);
   };
@@ -231,6 +237,7 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
             basePriceKg: "",
             imageUrl: "",
             inStock: true,
+            availableChunkSizes: [],
           });
         }}
         className="mb-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500 sm:mb-4 sm:w-auto sm:px-4 sm:py-2 sm:text-sm"
@@ -338,6 +345,31 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
                 </label>
               </div>
 
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 sm:text-sm mb-1">
+                  Chunk Sizes (grams)
+                </label>
+                <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-10 sm:gap-2">
+                  {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100].map((size) => (
+                    <label key={size} className="flex items-center gap-1 text-xs text-zinc-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.availableChunkSizes.includes(size)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setForm({ ...form, availableChunkSizes: [...form.availableChunkSizes, size].sort((a, b) => a - b) });
+                          } else {
+                            setForm({ ...form, availableChunkSizes: form.availableChunkSizes.filter((s) => s !== size) });
+                          }
+                        }}
+                        className="h-3.5 w-3.5 rounded border-zinc-300"
+                      />
+                      {size}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3 sm:gap-3 sm:pt-4">
                 <button
                   type="button"
@@ -391,6 +423,9 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
                 <p className="mt-0.5 text-xs text-emerald-600 font-medium">
                   ${item.basePriceKg.toFixed(2)}/lb
                 </p>
+                {item.availableChunkSizes && item.availableChunkSizes.length > 0 && (
+                  <p className="mt-0.5 text-[10px] text-zinc-500">Sizes: {item.availableChunkSizes.join(', ')}g</p>
+                )}
               </div>
               <div className="flex gap-2">
                 <button
@@ -422,6 +457,9 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Product Name
               </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Sizes
+              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Price/lb
               </th>
@@ -443,6 +481,11 @@ function InventoryTab({ inventory }: { inventory: InventoryItem[] }) {
                 </td>
                 <td className="px-4 py-3 text-sm font-medium text-zinc-900">
                   {item.itemName}
+                </td>
+                <td className="px-4 py-3 text-xs text-zinc-600">
+                  {item.availableChunkSizes && item.availableChunkSizes.length > 0
+                    ? item.availableChunkSizes.map(s => `${s}g`).join(", ")
+                    : "—"}
                 </td>
                 <td className="px-4 py-3 text-right text-sm text-zinc-900">
                   ${item.basePriceKg.toFixed(2)}
@@ -513,6 +556,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
       itemName: item.item.itemName,
       quantity: item.requestedKg,
       fulfilledQty: item.fulfilledKg,
+      requestedChunkSize: item.requestedChunkSize,
       finalPrice: order.finalTotal ? order.finalTotal / order.items.length : null,
       requestedEta: order.requestedEta,
       adminEta: order.adminEta,
@@ -646,7 +690,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 <h4 className="mt-0.5 text-sm font-medium text-zinc-900">
                   {row.restaurantName}
                 </h4>
-                <p className="mt-0.5 text-xs text-zinc-600">{row.itemName}</p>
+                <p className="mt-0.5 text-xs text-zinc-600">{row.itemName}{row.requestedChunkSize ? ` (${row.requestedChunkSize}g)` : ""}</p>
                 <div className="mt-2 space-y-0.5 text-[10px] text-zinc-600">
                   <p>Qty: {row.quantity}lb {row.fulfilledQty !== row.quantity && `→ ${row.fulfilledQty}lb`}</p>
                   <p>Price: {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}</p>
@@ -731,7 +775,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 <td className="px-4 py-3 text-sm font-medium text-zinc-900">
                   {row.restaurantName}
                 </td>
-                <td className="px-4 py-3 text-sm text-zinc-900">{row.itemName}</td>
+                <td className="px-4 py-3 text-sm text-zinc-900">{row.itemName}{row.requestedChunkSize ? ` (${row.requestedChunkSize}g)` : ""}</td>
                 <td className="px-4 py-3 text-right text-sm text-zinc-900">
                   {row.quantity}
                   {row.fulfilledQty !== row.quantity && (
@@ -994,6 +1038,7 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
       orderNumber: order.orderNumber,
       restaurantName: order.user.restaurantName || "N/A",
       itemName: item.item.itemName,
+      requestedChunkSize: item.requestedChunkSize,
       quantity: item.requestedKg,
       fulfilledQty: item.fulfilledKg,
       finalPrice: order.finalTotal ? order.finalTotal / order.items.length : null,

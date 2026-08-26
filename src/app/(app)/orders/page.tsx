@@ -49,6 +49,7 @@ export default async function OrdersPage() {
       itemId: oi.item_id,
       requestedKg: Number(oi.requested_kg),
       fulfilledKg: oi.fulfilled_kg ? Number(oi.fulfilled_kg) : null,
+      requestedChunkSize: oi.requested_chunk_size ?? null,
       item: {
         id: oi.inventory.id,
         itemName: oi.inventory.item_name,
