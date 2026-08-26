@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
 import { generateOrderNumber } from "@/lib/order-number";
 
+function parseChunkGrams(chunkSize: string): number | null {
+  const match = chunkSize.match(/(\d+(?:\.\d+)?)\s*g/i);
+  return match ? parseFloat(match[1]) : null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
@@ -49,7 +54,7 @@ export async function POST(req: NextRequest) {
     let originalTotal = 0;
     const validatedItems: {
       itemId: string;
-      requestedChunkSize: number | null;
+      requestedChunkSize: string | null;
       requestedLb: number;
       basePriceKg: number;
     }[] = [];
@@ -81,11 +86,14 @@ export async function POST(req: NextRequest) {
         ? Number(override.custom_price_kg)
         : Number(inventory.base_price_kg);
 
-      const requestedChunkSize: number | null = item.chunkSize ?? null;
+      const requestedChunkSize: string | null = item.chunkSize ?? null;
       let weightLb = Number(item.requestedLb);
 
-      if (requestedChunkSize != null) {
-        weightLb = (Number(item.requestedLb) * requestedChunkSize) / 453.592;
+      if (requestedChunkSize) {
+        const grams = parseChunkGrams(requestedChunkSize);
+        if (grams != null) {
+          weightLb = (Number(item.requestedLb) * grams) / 453.592;
+        }
       }
 
       originalTotal += price * weightLb;

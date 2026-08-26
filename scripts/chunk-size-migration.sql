@@ -1,10 +1,10 @@
 -- ============================================
--- Chunk Size Migration
+-- Chunk Size Migration (String Types)
 -- Run this in Supabase SQL Editor
 -- ============================================
 
--- 1. Add available_chunk_sizes to inventory (integer array)
-ALTER TABLE inventory ADD COLUMN IF NOT EXISTS available_chunk_sizes INTEGER[];
+-- 1. Alter available_chunk_sizes from INTEGER[] to TEXT[]
+ALTER TABLE inventory ALTER COLUMN available_chunk_sizes TYPE TEXT[] USING available_chunk_sizes::text[];
 
--- 2. Add requested_chunk_size to order_items
-ALTER TABLE order_items ADD COLUMN IF NOT EXISTS requested_chunk_size INTEGER;
+-- 2. Alter requested_chunk_size from INTEGER to TEXT
+ALTER TABLE order_items ALTER COLUMN requested_chunk_size TYPE TEXT USING requested_chunk_size::text;

@@ -8,8 +8,8 @@ type CartContextType = {
   count: number;
   total: number;
   addItem: (item: Omit<cart.CartItem, "quantity">, qty: number) => void;
-  updateQty: (itemId: string, chunkSize: number | undefined, qty: number) => void;
-  removeItem: (itemId: string, chunkSize?: number) => void;
+  updateQty: (itemId: string, chunkSize: string | undefined, qty: number) => void;
+  removeItem: (itemId: string, chunkSize?: string) => void;
   clear: () => void;
 };
 
@@ -27,12 +27,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems(next);
   }, []);
 
-  const updateQty = useCallback((itemId: string, chunkSize: number | undefined, qty: number) => {
+  const updateQty = useCallback((itemId: string, chunkSize: string | undefined, qty: number) => {
     const next = cart.updateCartQty(itemId, chunkSize, qty);
     setItems(next);
   }, []);
 
-  const removeItem = useCallback((itemId: string, chunkSize?: number) => {
+  const removeItem = useCallback((itemId: string, chunkSize?: string) => {
     const next = cart.removeFromCart(itemId, chunkSize);
     setItems(next);
   }, []);
@@ -44,7 +44,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
   const total = items.reduce((sum, i) => {
-    const weightLb = i.chunkSize != null ? (i.quantity * i.chunkSize) / 453.592 : i.quantity;
+    const weightLb = cart.calcWeightLb(i.quantity, i.chunkSize);
     return sum + weightLb * i.basePriceKg;
   }, 0);
 

@@ -7,7 +7,7 @@ type OrderItem = {
   id: string;
   requestedKg: number;
   fulfilledKg: number | null;
-  requestedChunkSize: number | null;
+  requestedChunkSize: string | null;
   item: {
     id: string;
     itemName: string;

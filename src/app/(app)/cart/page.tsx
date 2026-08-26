@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/cart-provider";
 import { useState } from "react";
+import { parseChunkGrams, calcWeightLb } from "@/lib/cart";
 
 export default function CartPage() {
   const router = useRouter();
@@ -69,16 +70,13 @@ export default function CartPage() {
 
       <div className="mt-4 space-y-2 sm:mt-6 sm:space-y-3">
         {items.map((item) => {
-          const hasChunk = item.chunkSize != null;
-          const weightLb = hasChunk
-            ? (item.quantity * item.chunkSize!) / 453.592
-            : item.quantity;
+          const weightLb = calcWeightLb(item.quantity, item.chunkSize);
           const itemTotal = weightLb * item.basePriceKg;
-          const increment = hasChunk ? 1 : 0.5;
+          const increment = 0.5;
 
           return (
             <div
-              key={hasChunk ? `${item.itemId}::${item.chunkSize}` : item.itemId}
+              key={item.chunkSize ? `${item.itemId}::${item.chunkSize}` : item.itemId}
               className="rounded-xl border border-zinc-200 bg-white p-3 sm:p-4"
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -86,7 +84,7 @@ export default function CartPage() {
                   <p className="text-sm font-semibold text-zinc-900 sm:text-base">{item.itemName}</p>
                   <p className="text-xs text-zinc-500 sm:text-sm">
                     ${item.basePriceKg.toFixed(2)}/lb
-                    {hasChunk && ` · ${item.chunkSize}g chunk`}
+                    {item.chunkSize && ` · ${item.chunkSize}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2">
@@ -96,9 +94,9 @@ export default function CartPage() {
                   >
                     −
                   </button>
-                  <span className="w-16 text-center text-xs font-medium sm:w-20 sm:text-sm">
-                    {hasChunk
-                      ? `${item.quantity} × ${item.chunkSize}g`
+                  <span className="w-20 text-center text-xs font-medium sm:w-24 sm:text-sm">
+                    {item.chunkSize
+                      ? `${item.quantity} × ${item.chunkSize}`
                       : `${item.quantity} lb`}
                   </span>
                   <button

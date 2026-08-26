@@ -11,7 +11,7 @@ type InventoryItem = {
   priceKg: number;
   hasCustomPrice: boolean;
   imageUrl: string | null;
-  availableChunkSizes?: number[];
+  availableChunkSizes?: string[];
 };
 
 const categories = ["Chicken", "Beef", "Goat", "Lamb", "Mixed"] as const;

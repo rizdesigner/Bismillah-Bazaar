@@ -4,8 +4,20 @@ export type CartItem = {
   category: string;
   basePriceKg: number;
   quantity: number;
-  chunkSize?: number;
+  chunkSize?: string;
 };
+
+export function parseChunkGrams(chunkSize: string): number | null {
+  const match = chunkSize.match(/(\d+(?:\.\d+)?)\s*g/i);
+  return match ? parseFloat(match[1]) : null;
+}
+
+export function calcWeightLb(quantity: number, chunkSize?: string): number {
+  if (!chunkSize) return quantity;
+  const grams = parseChunkGrams(chunkSize);
+  if (grams == null) return quantity;
+  return (quantity * grams) / 453.592;
+}
 
 const CART_KEY = "bismillah_cart";
 
@@ -41,7 +53,7 @@ export function addToCart(item: Omit<CartItem, "quantity">, quantity: number): C
   return cart;
 }
 
-export function updateCartQty(itemId: string, chunkSize: number | undefined, quantity: number): CartItem[] {
+export function updateCartQty(itemId: string, chunkSize: string | undefined, quantity: number): CartItem[] {
   if (quantity <= 0) {
     return removeFromCart(itemId, chunkSize);
   }
@@ -55,7 +67,7 @@ export function updateCartQty(itemId: string, chunkSize: number | undefined, qua
   return cart;
 }
 
-export function removeFromCart(itemId: string, chunkSize?: number): CartItem[] {
+export function removeFromCart(itemId: string, chunkSize?: string): CartItem[] {
   const key = chunkSize != null ? `${itemId}::${chunkSize}` : itemId;
   const cart = getCart().filter((i) => cartItemKey(i) !== key);
   saveCart(cart);

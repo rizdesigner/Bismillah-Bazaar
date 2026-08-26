@@ -2,6 +2,7 @@
 
 import { useCart } from "./cart-provider";
 import { useState } from "react";
+import { parseChunkGrams, calcWeightLb } from "@/lib/cart";
 
 type Product = {
   id: string;
@@ -11,14 +12,14 @@ type Product = {
   priceKg: number;
   hasCustomPrice: boolean;
   imageUrl: string | null;
-  availableChunkSizes?: number[];
+  availableChunkSizes?: string[];
 };
 
 export function ProductCard({ product }: { product: Product }) {
   const { items, addItem, updateQty, removeItem } = useCart();
   const chunkSizes = product.availableChunkSizes ?? [];
   const hasSizes = chunkSizes.length > 0;
-  const [selectedChunk, setSelectedChunk] = useState<number | null>(hasSizes ? chunkSizes[0] : null);
+  const [selectedChunk, setSelectedChunk] = useState<string | null>(hasSizes ? chunkSizes[0] : null);
 
   const cartItem = items.find((i) =>
     hasSizes
@@ -27,8 +28,9 @@ export function ProductCard({ product }: { product: Product }) {
   );
   const qty = cartItem?.quantity ?? 0;
 
-  const effectivePrice = selectedChunk != null
-    ? product.priceKg * (selectedChunk / 453.592)
+  const grams = selectedChunk != null ? parseChunkGrams(selectedChunk) : null;
+  const effectivePrice = grams != null
+    ? product.priceKg * (grams / 453.592)
     : product.priceKg;
 
   const handleDecrease = () => {
@@ -52,7 +54,7 @@ export function ProductCard({ product }: { product: Product }) {
     );
   };
 
-  const handleSizeChange = (chunkSize: number) => {
+  const handleSizeChange = (chunkSize: string) => {
     setSelectedChunk(chunkSize);
     const existing = items.find(
       (i) => i.itemId === product.id && i.chunkSize === chunkSize
@@ -91,7 +93,7 @@ export function ProductCard({ product }: { product: Product }) {
       <p className="mt-1 text-base font-bold text-emerald-600 sm:text-lg">
         ${effectivePrice.toFixed(2)}
         <span className="text-xs font-normal text-zinc-500 sm:text-sm">
-          {selectedChunk != null ? `/ ${selectedChunk}g chunk` : "/lb"}
+          {grams != null ? `/ ${grams}g piece` : "/lb"}
         </span>
       </p>
       {product.hasCustomPrice && (
@@ -103,15 +105,12 @@ export function ProductCard({ product }: { product: Product }) {
       {hasSizes && (
         <select
           value={selectedChunk ?? ""}
-          onChange={(e) => {
-            const val = Number(e.target.value);
-            if (val) handleSizeChange(val);
-          }}
+          onChange={(e) => handleSizeChange(e.target.value)}
           className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-xs sm:text-sm"
         >
           {chunkSizes.map((size) => (
             <option key={size} value={size}>
-              {size}g chunks
+              {size}
             </option>
           ))}
         </select>
@@ -127,8 +126,8 @@ export function ProductCard({ product }: { product: Product }) {
             −
           </button>
           <span className="w-16 text-center text-xs font-medium sm:w-20 sm:text-sm">
-            {qty > 0 && selectedChunk != null
-              ? `${qty} × ${selectedChunk}g`
+            {qty > 0 && selectedChunk
+              ? `${qty} × ${selectedChunk}`
               : qty > 0
               ? `${qty} lb`
               : "0"}
