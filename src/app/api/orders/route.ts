@@ -157,8 +157,16 @@ export async function POST(req: NextRequest) {
       return { name: inv?.item_name || item.itemId, quantity: item.requestedLb };
     });
 
-    sendOrderPlacedEmail(user.email!, customerProfile?.restaurant_name || '', orderNumber, itemDetails, originalTotal);
-    sendNewOrderAlertEmail(['admin@bismillahbazaar.com'], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, originalTotal);
+    try {
+      await sendOrderPlacedEmail(user.email!, customerProfile?.restaurant_name || '', orderNumber, itemDetails, originalTotal);
+    } catch (e) {
+      console.error('Email send failed (order placed):', e);
+    }
+    try {
+      await sendNewOrderAlertEmail(['admin@bismillahbazaar.com'], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, originalTotal);
+    } catch (e) {
+      console.error('Email send failed (new order alert):', e);
+    }
 
     return NextResponse.json({ orderId: order.id });
   } catch (error) {

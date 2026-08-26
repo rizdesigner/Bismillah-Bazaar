@@ -1,10 +1,9 @@
-import { Resend } from 'resend'
-
-function getResend() {
+async function getResend() {
   if (!process.env.RESEND_API_KEY) {
     console.warn('RESEND_API_KEY not configured, emails will not be sent')
     return null
   }
+  const { Resend } = await import('resend')
   return new Resend(process.env.RESEND_API_KEY)
 }
 
@@ -25,7 +24,7 @@ function basewrap(title: string, body: string) {
 }
 
 export async function sendPasswordResetEmail(email: string, resetUrl: string) {
-  const resend = getResend()
+  const resend = await getResend()
   if (!resend) return
 
   try {
@@ -46,7 +45,7 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
 }
 
 export async function sendAccountApprovedEmail(email: string, restaurantName: string) {
-  const resend = getResend()
+  const resend = await getResend()
   if (!resend) return
 
   try {
@@ -67,7 +66,7 @@ export async function sendAccountApprovedEmail(email: string, restaurantName: st
 }
 
 export async function sendAccountRejectedEmail(email: string, restaurantName: string) {
-  const resend = getResend()
+  const resend = await getResend()
   if (!resend) return
 
   try {
@@ -94,7 +93,7 @@ export async function sendNewRegistrationEmail(
   phone: string | null,
   location: string | null,
 ) {
-  const resend = getResend()
+  const resend = await getResend()
   if (!resend) return
 
   const details = [
@@ -129,7 +128,7 @@ export async function sendOrderPlacedEmail(
   items: { name: string; quantity: number }[],
   total: number,
 ) {
-  const resend = getResend()
+  const resend = await getResend()
   if (!resend) return
 
   const itemsHtml = items
@@ -165,7 +164,7 @@ export async function sendNewOrderAlertEmail(
   itemCount: number,
   total: number,
 ) {
-  const resend = getResend()
+  const resend = await getResend()
   if (!resend) return
 
   try {
@@ -194,7 +193,7 @@ export async function sendOrderConfirmedEmail(
   orderNumber: string,
   finalTotal: number,
 ) {
-  const resend = getResend()
+  const resend = await getResend()
   if (!resend) return
 
   try {
@@ -224,7 +223,7 @@ export async function sendOrderModifiedEmail(
   changes: string[],
   newTotal: number,
 ) {
-  const resend = getResend()
+  const resend = await getResend()
   if (!resend) return
 
   const changesHtml = changes
@@ -259,7 +258,7 @@ export async function sendDeliveryReceipt(
   order: any,
   items: any[]
 ) {
-  const resend = getResend()
+  const resend = await getResend()
   if (!resend) return
 
   try {
