@@ -145,13 +145,20 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single();
 
+    const { data: invRows } = await supabase
+      .from('inventory')
+      .select('id, item_name')
+      .in('id', validatedItems.map((i) => i.itemId));
+
+    const invMap = new Map((invRows || []).map((r: any) => [r.id, r]));
+
     const itemDetails = validatedItems.map((item) => {
-      const inv = inventoryMap[item.itemId];
+      const inv = invMap.get(item.itemId);
       return { name: inv?.item_name || item.itemId, quantity: item.requestedLb };
     });
 
-    sendOrderPlacedEmail(user.email, customerProfile?.restaurant_name || '', orderNumber, itemDetails, estimatedTotal);
-    sendNewOrderAlertEmail(['admin@bismillahbazaar.com'], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, estimatedTotal);
+    sendOrderPlacedEmail(user.email, customerProfile?.restaurant_name || '', orderNumber, itemDetails, originalTotal);
+    sendNewOrderAlertEmail(['admin@bismillahbazaar.com'], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, originalTotal);
 
     return NextResponse.json({ orderId: order.id });
   } catch (error) {
