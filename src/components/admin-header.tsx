@@ -74,7 +74,7 @@ export function AdminHeader() {
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -82,7 +82,7 @@ export function AdminHeader() {
   return (
     <header className="border-b border-zinc-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <Link href="/" className="flex items-center gap-2.5 sm:gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-base font-bold text-white sm:h-9 sm:w-9 sm:text-lg">
             B
           </div>
@@ -94,7 +94,7 @@ export function AdminHeader() {
               Admin Panel
             </p>
           </div>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-3">
           <div className="relative">

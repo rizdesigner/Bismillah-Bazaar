@@ -31,11 +31,10 @@ export function AppHeader() {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      router.push(redirectUrl);
-      router.refresh();
+      window.location.href = redirectUrl;
     } catch (err) {
       console.error("Sign out error:", err);
-      router.push(redirectUrl);
+      window.location.href = redirectUrl;
     }
   };
 

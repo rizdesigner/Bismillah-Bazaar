@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import { ChangePasswordForm } from "@/components/change-password-form";
+import { LogoutButton } from "@/components/logout-button";
 
 export const runtime = 'edge';
 export const metadata = { title: "Account" };
@@ -82,6 +83,10 @@ export default async function AccountPage() {
             <ChangePasswordForm />
           </div>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <LogoutButton />
       </div>
     </div>
   );
