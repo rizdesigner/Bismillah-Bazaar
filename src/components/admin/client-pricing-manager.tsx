@@ -136,7 +136,7 @@ export function ClientPricingManager({
             <div className="divide-y divide-zinc-100">
               {inventory.map((item) => {
                 const override = overridesMap.get(item.id);
-                const customPrice = override?.customPriceKg;
+                const customPrice = override?.customPriceKg ?? null;
                 const isAvailable = override?.isAvailable ?? true;
 
                 return (
