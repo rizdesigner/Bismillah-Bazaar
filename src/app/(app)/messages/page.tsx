@@ -46,7 +46,6 @@ export default function MessagesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const initConversation = useCallback(async () => {
-    let cancelled = false;
     try {
       const supabase = getSupabase();
       setLoading(true);
@@ -54,11 +53,13 @@ export default function MessagesPage() {
 
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError) {
-        if (!cancelled) { setError("Auth error: " + authError.message); setLoading(false); }
+        setError("Auth error: " + authError.message);
+        setLoading(false);
         return;
       }
       if (!user) {
-        if (!cancelled) { setError("Not logged in"); setLoading(false); }
+        setError("Not logged in");
+        setLoading(false);
         return;
       }
 
@@ -77,25 +78,25 @@ export default function MessagesPage() {
             .select()
             .single();
           if (insertError) {
-            if (!cancelled) { setError("Cannot create conversation: " + insertError.message); setLoading(false); }
+            setError("Cannot create conversation: " + insertError.message);
+            setLoading(false);
             return;
           }
           conv = newConv;
         } else {
-          if (!cancelled) { setError("Database error: " + error.message); setLoading(false); }
+          setError("Database error: " + error.message);
+          setLoading(false);
           return;
         }
       }
 
-      if (!cancelled) {
-        setConversation(conv);
-        setLoading(false);
-      }
+      setConversation(conv);
+      setLoading(false);
     } catch (err: any) {
       console.error("initConversation error:", err);
-      if (!cancelled) { setError(err.message || "Unknown error"); setLoading(false); }
+      setError(err.message || "Unknown error");
+      setLoading(false);
     }
-    return () => { cancelled = true; };
   }, [getSupabase]);
 
   const fetchMessages = useCallback(async () => {
@@ -155,8 +156,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const cleanup = initConversation();
-      return cleanup;
+      initConversation();
     }
   }, [initConversation]);
 
