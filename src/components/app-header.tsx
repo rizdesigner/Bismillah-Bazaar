@@ -28,9 +28,15 @@ export function AppHeader() {
   const displayName = profile?.restaurant_name || profile?.email;
 
   const handleSignOut = async (redirectUrl: string) => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push(redirectUrl);
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push(redirectUrl);
+      router.refresh();
+    } catch (err) {
+      console.error("Sign out error:", err);
+      router.push(redirectUrl);
+    }
   };
 
   return (

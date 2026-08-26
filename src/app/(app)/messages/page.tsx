@@ -110,28 +110,47 @@ export default function MessagesPage() {
   }, [conversation, getSupabase]);
 
   const sendMessage = useCallback(async () => {
+    console.log('sendMessage called, conversation:', conversation, 'newMessage:', newMessage);
     const supabase = getSupabase();
-    if (!newMessage.trim() || !conversation || sending) return;
-    setSending(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: msg } = await supabase
-      .from("messages")
-      .insert({
-        conversation_id: conversation.id,
-        sender_id: user.id,
-        sender_role: "customer",
-        content: newMessage.trim(),
-      })
-      .select()
-      .single();
-
-    if (msg) {
-      setMessages((prev) => [...prev, msg]);
-      setNewMessage("");
+    if (!newMessage.trim() || !conversation || sending) {
+      console.log('sendMessage early return:', { newMessage: newMessage.trim(), conversation, sending });
+      return;
     }
-    setSending(false);
+    setSending(true);
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('Auth error in sendMessage:', authError);
+        setSending(false);
+        return;
+      }
+
+      const { data: msg, error: insertError } = await supabase
+        .from("messages")
+        .insert({
+          conversation_id: conversation.id,
+          sender_id: user.id,
+          sender_role: "customer",
+          content: newMessage.trim(),
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        setSending(false);
+        return;
+      }
+
+      if (msg) {
+        setMessages((prev) => [...prev, msg]);
+        setNewMessage("");
+      }
+    } catch (err) {
+      console.error('sendMessage error:', err);
+    } finally {
+      setSending(false);
+    }
   }, [newMessage, conversation, sending, getSupabase]);
 
   useEffect(() => {
