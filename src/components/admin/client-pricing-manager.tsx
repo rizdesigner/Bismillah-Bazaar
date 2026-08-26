@@ -90,6 +90,12 @@ export function ClientPricingManager({
   }
 
   const overridesMap = new Map(overrides.map((o) => [o.itemId, o]));
+  const [pendingPrices, setPendingPrices] = useState<Record<string, string>>({});
+
+  function getPendingPrice(itemId: string, basePrice: number, customPrice: number | null): string {
+    if (pendingPrices[itemId] !== undefined) return pendingPrices[itemId];
+    return customPrice != null ? customPrice.toString() : "";
+  }
 
   return (
     <div className="space-y-4">
@@ -154,15 +160,26 @@ export function ClientPricingManager({
                             step="0.01"
                             min="0"
                             placeholder={item.basePriceKg.toFixed(2)}
-                            value={customPrice ?? ""}
+                            value={getPendingPrice(item.id, item.basePriceKg, customPrice)}
                             onChange={(e) => {
-                              const value = e.target.value;
-                              const newPrice = value ? parseFloat(value) : null;
-                              handleSaveOverride(
-                                item.id,
-                                newPrice,
-                                isAvailable
-                              );
+                              setPendingPrices((prev) => ({ ...prev, [item.id]: e.target.value }));
+                            }}
+                            onBlur={() => {
+                              const val = pendingPrices[item.id];
+                              if (val !== undefined) {
+                                const newPrice = val === "" ? null : parseFloat(val);
+                                if (newPrice !== customPrice) {
+                                  handleSaveOverride(item.id, newPrice, isAvailable);
+                                }
+                                setPendingPrices((prev) => {
+                                  const next = { ...prev };
+                                  delete next[item.id];
+                                  return next;
+                                });
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                             }}
                             disabled={saving === item.id}
                             className="w-24 rounded border border-zinc-300 px-2 py-1 text-sm disabled:opacity-50"
