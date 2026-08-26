@@ -3,10 +3,8 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase-client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -42,11 +40,11 @@ export default function LoginPage() {
         }
 
         if (profile.role === "admin") {
-          router.push("/admin");
+          window.location.href = "/admin";
         } else if (profile.status === "active") {
-          router.push("/catalog");
+          window.location.href = "/catalog";
         } else {
-          router.push("/register/pending");
+          window.location.href = "/register/pending";
         }
       }
     } catch {
