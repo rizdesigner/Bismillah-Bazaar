@@ -27,16 +27,26 @@ export default function LoginPage() {
       if (authError) {
         setError("Invalid email or password");
       } else if (data.user) {
-        const { data: profile } = await supabase
+        console.log('Login successful, user:', data.user.email);
+        const { data: profile, error: profileError } = await supabase
           .from("users")
-          .select("role")
+          .select("role, status")
           .eq("id", data.user.id)
           .single();
 
-        if (profile?.role === "admin") {
+        console.log('Profile query result:', profile, 'Error:', profileError);
+
+        if (profileError || !profile) {
+          setError("Account not found. Please contact support.");
+          return;
+        }
+
+        if (profile.role === "admin") {
           router.push("/admin");
-        } else {
+        } else if (profile.status === "active") {
           router.push("/catalog");
+        } else {
+          router.push("/register/pending");
         }
       }
     } catch {
