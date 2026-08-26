@@ -3,7 +3,6 @@ export const runtime = 'edge';
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
 import { generateOrderNumber } from "@/lib/order-number";
-import { sendOrderPlacedEmail, sendNewOrderAlertEmail } from "@/lib/email";
 
 function parseChunkGrams(chunkSize: string): number | null {
   const match = chunkSize.match(/(\d+(?:\.\d+)?)\s*g/i);
@@ -158,11 +157,13 @@ export async function POST(req: NextRequest) {
     });
 
     try {
+      const { sendOrderPlacedEmail } = await import('@/lib/email');
       await sendOrderPlacedEmail(user.email!, customerProfile?.restaurant_name || '', orderNumber, itemDetails, originalTotal);
     } catch (e) {
       console.error('Email send failed (order placed):', e);
     }
     try {
+      const { sendNewOrderAlertEmail } = await import('@/lib/email');
       await sendNewOrderAlertEmail(['admin@bismillahbazaar.com'], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, originalTotal);
     } catch (e) {
       console.error('Email send failed (new order alert):', e);
