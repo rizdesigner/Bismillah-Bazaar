@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
       return { name: inv?.item_name || item.itemId, quantity: item.requestedLb };
     });
 
-    sendOrderPlacedEmail(user.email, customerProfile?.restaurant_name || '', orderNumber, itemDetails, originalTotal);
+    sendOrderPlacedEmail(user.email!, customerProfile?.restaurant_name || '', orderNumber, itemDetails, originalTotal);
     sendNewOrderAlertEmail(['admin@bismillahbazaar.com'], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, originalTotal);
 
     return NextResponse.json({ orderId: order.id });
