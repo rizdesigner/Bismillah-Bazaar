@@ -27,6 +27,7 @@ type Order = {
   paymentMethod: string | null;
   paidAt: string | null;
   createdAt: string;
+  note: string | null;
   items: OrderItem[];
 };
 
@@ -265,10 +266,11 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                     </p>
                   )}
                 </div>
-                {(order.requestedEta || order.adminEta) && (
+                {(order.requestedEta || order.adminEta || order.note) && (
                   <div className="text-right">
                     {order.requestedEta && <p className="text-xs text-zinc-500">Requested: {new Date(order.requestedEta).toLocaleString()}</p>}
                     {order.adminEta && <p className="text-xs font-medium text-emerald-700">Admin: {new Date(order.adminEta).toLocaleString()}</p>}
+                    {order.note && <p className="mt-1 text-xs italic text-zinc-500">Note: {order.note}</p>}
                   </div>
                 )}
               </div>
@@ -345,10 +347,11 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                     </p>
                   )}
                 </div>
-                {(order.requestedEta || order.adminEta) && (
+                {(order.requestedEta || order.adminEta || order.note) && (
                   <div className="text-right">
                     {order.requestedEta && <p className="text-xs text-zinc-500">Requested: {new Date(order.requestedEta).toLocaleString()}</p>}
                     {order.adminEta && <p className="text-xs font-medium text-emerald-700">Admin: {new Date(order.adminEta).toLocaleString()}</p>}
+                    {order.note && <p className="mt-1 text-xs italic text-zinc-500">Note: {order.note}</p>}
                   </div>
                 )}
               </div>

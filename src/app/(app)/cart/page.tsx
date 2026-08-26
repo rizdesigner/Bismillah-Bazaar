@@ -9,6 +9,7 @@ export default function CartPage() {
   const { items, total, updateQty, removeItem, clear } = useCart();
   const [placing, setPlacing] = useState(false);
   const [requestedEta, setRequestedEta] = useState("");
+  const [note, setNote] = useState("");
   const [minDate] = useState(
     () => new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)
   );
@@ -26,6 +27,7 @@ export default function CartPage() {
             requestedKg: i.quantity,
           })),
           requestedEta: requestedEta || null,
+          note: note.trim() || null,
         }),
       });
 
@@ -122,6 +124,22 @@ export default function CartPage() {
             </div>
           );
         })}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-3 sm:mt-6 sm:p-4">
+        <label className="block text-sm font-semibold text-zinc-900">
+          Order Note (Optional)
+        </label>
+        <p className="mt-1 text-xs text-zinc-500">
+          Any special instructions for this order.
+        </p>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="e.g. Extra frozen, deliver to back entrance..."
+          rows={3}
+          className="mt-2 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 sm:px-4 sm:py-2.5"
+        />
       </div>
 
       <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-3 sm:mt-6 sm:p-4">

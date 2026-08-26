@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ResetLinkModal } from "./reset-link-modal";
 import { ClientPricingManager } from "./client-pricing-manager";
 import { AccountsReceivable } from "./accounts-receivable";
-import { ChatManager } from "./chat-manager";
 
 type InventoryItem = {
   id: string;
@@ -38,6 +37,7 @@ type Order = {
   paymentMethod: string | null;
   paidAt: string | null;
   createdAt: string;
+  note: string | null;
   user: {
     id: string;
     restaurantName: string | null;
@@ -65,7 +65,7 @@ type Props = {
 };
 
 export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Props) {
-  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered" | "pricing" | "receivable" | "messages">("inventory");
+  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered" | "pricing" | "receivable">("inventory");
   const [resetTarget, setResetTarget] = useState<{
     id: string;
     email: string;
@@ -83,7 +83,6 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
     { id: "pending" as const, label: "Pending", count: pendingCustomers.length },
     { id: "pricing" as const, label: "Pricing", count: null },
     { id: "receivable" as const, label: "Receivable", count: null },
-    { id: "messages" as const, label: "Messages", count: null },
   ];
 
   return (
@@ -128,7 +127,6 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
         />
       )}
       {activeTab === "receivable" && <AccountsReceivable orders={orders} />}
-      {activeTab === "messages" && <ChatManager />}
 
       <ResetLinkModal user={resetTarget} onClose={() => setResetTarget(null)} />
     </div>
@@ -522,6 +520,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
       status: order.status,
       paymentStatus: order.paymentStatus,
       dueDate: order.dueDate,
+      note: order.note,
     }))
   );
 
@@ -648,7 +647,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                   {row.restaurantName}
                 </h4>
                 <p className="mt-0.5 text-xs text-zinc-600">{row.itemName}</p>
-                <div className="mt-2 space-y-0.5 text-[10px] text-zinc-600">
+                <p className="mt-2 space-y-0.5 text-[10px] text-zinc-600">
                   <p>Qty: {row.quantity}kg {row.fulfilledQty !== row.quantity && `→ ${row.fulfilledQty}kg`}</p>
                   <p>Price: {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}</p>
                   {row.requestedEta && <p>Req: {new Date(row.requestedEta).toLocaleString()}</p>}
@@ -658,6 +657,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                       Due: {new Date(row.dueDate).toLocaleDateString()}
                     </p>
                   )}
+                  {row.note && <p className="mt-1 italic text-zinc-500">Note: {row.note}</p>}
                 </div>
               </div>
               <div className="flex flex-col gap-1">
@@ -746,7 +746,8 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 <td className="px-4 py-3 text-sm text-zinc-600">
                   {row.requestedEta && <div className="text-xs">Req: {new Date(row.requestedEta).toLocaleString()}</div>}
                   {row.adminEta && <div className="text-xs font-medium text-emerald-700">Admin: {new Date(row.adminEta).toLocaleString()}</div>}
-                  {!row.requestedEta && !row.adminEta && "—"}
+                  {row.note && <div className="mt-1 text-xs italic text-zinc-500">Note: {row.note}</div>}
+                  {!row.requestedEta && !row.adminEta && !row.note && "—"}
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span

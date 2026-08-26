@@ -49,24 +49,6 @@ const tabs: Tab[] = [
     ),
   },
   {
-    href: "/messages",
-    label: "Messages",
-    icon: (active) => (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="h-5 w-5 sm:h-6 sm:w-6"
-        aria-hidden="true"
-      >
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" fill={active ? "currentColor" : "none"} />
-      </svg>
-    ),
-  },
-  {
     href: "/account",
     label: "Account",
     icon: (active) => (
@@ -98,7 +80,7 @@ export function BottomTabBar() {
       className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 sm:mx-auto sm:max-w-md"
       aria-label="Primary"
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-3">
         {tabs.map((tab) => {
           const active = pathname === tab.href;
           return (

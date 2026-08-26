@@ -32,7 +32,7 @@ export default async function OrdersPage() {
     userId: order.user_id,
     orderNumber: order.order_number,
     status: order.status,
-    notes: order.notes,
+    note: order.note,
     originalTotal: Number(order.original_total),
     finalTotal: order.final_total ? Number(order.final_total) : null,
     paymentStatus: order.payment_status,
@@ -49,7 +49,6 @@ export default async function OrdersPage() {
       itemId: oi.item_id,
       requestedKg: Number(oi.requested_kg),
       fulfilledKg: oi.fulfilled_kg ? Number(oi.fulfilled_kg) : null,
-      notes: oi.notes,
       item: {
         id: oi.inventory.id,
         itemName: oi.inventory.item_name,

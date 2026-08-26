@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { items, requestedEta } = await req.json();
+    const { items, requestedEta, note } = await req.json();
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -119,6 +119,7 @@ export async function POST(req: NextRequest) {
         requested_eta: requestedEta ? new Date(requestedEta).toISOString() : null,
         due_date: dueDate.toISOString(),
         status: "pending",
+        note: note || null,
       })
       .select()
       .single();
