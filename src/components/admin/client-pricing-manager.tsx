@@ -59,7 +59,7 @@ export function ClientPricingManager({
     try {
       const res = await fetch(`/api/admin/client-overrides?userId=${userId}`);
       if (res.ok) {
-        const data = await res.json();
+        const data: ClientOverride[] = await res.json();
         setOverrides(data);
         const existingMap = new Map(data.map((o: ClientOverride) => [o.itemId, o]));
         const defaults: Record<string, PendingChange> = {};
