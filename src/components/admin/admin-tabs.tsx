@@ -700,9 +700,9 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 {order.status === "confirmed" && (
                   <button
                     onClick={() => handleDeliver(order.id)}
-                    className="rounded bg-zinc-800 px-2 py-1 text-[10px] font-medium text-white hover:bg-zinc-700"
+                    className="rounded bg-emerald-600 px-3 py-1.5 text-[10px] font-medium text-white hover:bg-emerald-500"
                   >
-                    Deliver
+                    Mark Delivered
                   </button>
                 )}
               </div>
@@ -812,9 +812,9 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                           {order.status === "confirmed" && (
                             <button
                               onClick={() => handleDeliver(order.id)}
-                              className="rounded bg-zinc-800 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700"
+                              className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500"
                             >
-                              Deliver
+                              Mark Delivered
                             </button>
                           )}
                         </div>
