@@ -38,14 +38,13 @@ export default async function CatalogPage() {
   const serializedInventory = (inventory ?? [])
     .filter((item) => {
       const override = overridesMap.get(item.id);
-      if (override && override.is_available === false) {
-        return false;
-      }
+      if (!override) return false;
+      if (override.is_available === false) return false;
       return true;
     })
     .map((item) => {
-      const override = overridesMap.get(item.id);
-      const finalPrice = override?.custom_price_kg
+      const override = overridesMap.get(item.id)!;
+      const finalPrice = override.custom_price_kg
         ? Number(override.custom_price_kg)
         : Number(item.base_price_kg);
 
@@ -56,7 +55,7 @@ export default async function CatalogPage() {
         unit: item.unit,
         basePriceKg: Number(item.base_price_kg),
         priceKg: finalPrice,
-        hasCustomPrice: !!override?.custom_price_kg,
+        hasCustomPrice: !!override.custom_price_kg,
         inStock: item.in_stock,
         imageUrl: item.image_url,
         availableChunkSizes: item.available_chunk_sizes ?? [],

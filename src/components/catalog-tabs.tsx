@@ -17,10 +17,20 @@ type InventoryItem = {
 export function CatalogTabs({ inventory }: { inventory: InventoryItem[] }) {
   const categories = [...new Set(inventory.map((item) => item.category))].sort();
   const [activeCategory, setActiveCategory] = useState<string>(
-    categories[0] ?? "Poultry"
+    categories[0] ?? ""
   );
 
   const filtered = inventory.filter((item) => item.category === activeCategory);
+
+  if (categories.length === 0) {
+    return (
+      <div className="mt-6 rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-center sm:p-12">
+        <p className="text-sm font-medium text-zinc-500">
+          No products assigned yet. Please contact your account manager to get access to the catalog.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4 sm:mt-6">
@@ -47,7 +57,7 @@ export function CatalogTabs({ inventory }: { inventory: InventoryItem[] }) {
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-center sm:p-12">
           <p className="text-sm font-medium text-zinc-500">
-            No items available in this category
+            No items available in this category yet
           </p>
         </div>
       ) : (
