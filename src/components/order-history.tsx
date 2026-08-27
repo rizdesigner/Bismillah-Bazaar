@@ -203,9 +203,14 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
             >
               <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs text-zinc-500">
-                    {new Date(order.createdAt).toLocaleString()}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-700">
+                      {order.orderNumber}
+                    </span>
+                    <span className="text-xs text-zinc-500">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </span>
+                  </div>
                   <span
                     className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-medium ${
                       statusColors[order.status] || "bg-zinc-100 text-zinc-700"
@@ -295,9 +300,14 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
             >
               <div className="mb-4 flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-zinc-500">
-                    {new Date(order.createdAt).toLocaleString()}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-700">
+                      {order.orderNumber}
+                    </span>
+                    <span className="text-xs text-zinc-500">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </span>
+                  </div>
                   <span
                     className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-medium ${
                       statusColors[order.status] || "bg-zinc-100 text-zinc-700"
