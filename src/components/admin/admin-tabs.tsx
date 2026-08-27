@@ -573,7 +573,6 @@ function OrdersTab({ orders }: { orders: Order[] }) {
   });
   const [loading, setLoading] = useState(false);
   const [paymentFilter, setPaymentFilter] = useState<"all" | "unpaid" | "paid" | "overdue">("all");
-  const [confirming, setConfirming] = useState<string | null>(null);
 
   const filteredOrders = orders.filter((order) => {
     if (paymentFilter === "all") return true;
@@ -607,33 +606,17 @@ function OrdersTab({ orders }: { orders: Order[] }) {
     }))
   );
 
-  const handleConfirmOrder = async (orderId: string) => {
-    const eta = prompt("Estimated delivery date/time (e.g. 2026-08-30 10:00):");
-    if (eta === null) return;
-
-    setConfirming(orderId);
-    try {
-      const res = await fetch(`/api/admin/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "confirmed",
-          adminEta: eta || null,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error || "Failed to confirm order");
-        return;
-      }
-
-      window.location.reload();
-    } catch {
-      alert("An error occurred");
-    } finally {
-      setConfirming(null);
-    }
+  const handleConfirmOrder = (order: Order) => {
+    setEditingOrder(order);
+    setEditForm({
+      items: order.items.map((item) => ({
+        id: item.id,
+        fulfilledKg: item.fulfilledKg ?? item.requestedKg,
+      })),
+      finalTotal: order.finalTotal ?? order.originalTotal,
+      adminEta: order.adminEta ? new Date(order.adminEta).toISOString().slice(0, 16) : "",
+      status: "confirmed",
+    });
   };
 
   const handleEdit = (order: Order) => {
@@ -750,22 +733,25 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 </div>
               </div>
               <div className="flex flex-col gap-1">
-                <button
-                  onClick={() => {
-                    const order = orders.find((o) => o.id === row.orderId);
-                    if (order) handleEdit(order);
-                  }}
-                  className="rounded px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-50"
-                >
-                  Edit
-                </button>
-                {row.status === "pending" && (
+                {row.status === "pending" ? (
                   <button
-                    onClick={() => handleConfirmOrder(row.orderId)}
-                    disabled={confirming === row.orderId}
-                    className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                    onClick={() => {
+                      const order = orders.find((o) => o.id === row.orderId);
+                      if (order) handleConfirmOrder(order);
+                    }}
+                    className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-emerald-500"
                   >
-                    {confirming === row.orderId ? "..." : "Confirm"}
+                    Confirm
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      const order = orders.find((o) => o.id === row.orderId);
+                      if (order) handleEdit(order);
+                    }}
+                    className="rounded px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-50"
+                  >
+                    Edit
                   </button>
                 )}
               </div>
@@ -870,22 +856,25 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => {
-                        const order = orders.find((o) => o.id === row.orderId);
-                        if (order) handleEdit(order);
-                      }}
-                      className="text-xs font-medium text-emerald-600 hover:text-emerald-500"
-                    >
-                      Edit
-                    </button>
-                    {row.status === "pending" && (
+                    {row.status === "pending" ? (
                       <button
-                        onClick={() => handleConfirmOrder(row.orderId)}
-                        disabled={confirming === row.orderId}
-                        className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                        onClick={() => {
+                          const order = orders.find((o) => o.id === row.orderId);
+                          if (order) handleConfirmOrder(order);
+                        }}
+                        className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500"
                       >
-                        {confirming === row.orderId ? "..." : "Confirm"}
+                        Confirm
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const order = orders.find((o) => o.id === row.orderId);
+                          if (order) handleEdit(order);
+                        }}
+                        className="text-xs font-medium text-emerald-600 hover:text-emerald-500"
+                      >
+                        Edit
                       </button>
                     )}
                   </div>
@@ -900,7 +889,9 @@ function OrdersTab({ orders }: { orders: Order[] }) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4">
           <div className="w-full max-h-[90vh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl sm:rounded-2xl sm:p-6">
             <div className="mb-4 flex items-center justify-between sm:mb-6">
-              <h2 className="text-base font-bold text-zinc-900 sm:text-xl">Edit Order</h2>
+              <h2 className="text-base font-bold text-zinc-900 sm:text-xl">
+                {editForm.status === "confirmed" ? "Confirm Order" : "Edit Order"}
+              </h2>
               <button
                 onClick={() => setEditingOrder(null)}
                 className="text-zinc-400 hover:text-zinc-600"
@@ -1047,7 +1038,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 disabled={loading}
                 className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 sm:flex-none sm:px-4 sm:text-sm"
               >
-                {loading ? "Saving..." : "Save Changes"}
+                {loading ? "Saving..." : editForm.status === "confirmed" ? "Confirm Order" : "Save Changes"}
               </button>
             </div>
           </div>
