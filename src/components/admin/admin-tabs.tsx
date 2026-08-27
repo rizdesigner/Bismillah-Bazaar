@@ -1321,18 +1321,35 @@ function UsersTab({
                 Joined: {new Date(customer.createdAt).toLocaleDateString()}
               </p>
             </div>
-            <button
-              onClick={() =>
-                onResetPassword({
-                  id: customer.id,
-                  email: customer.email,
-                  restaurantName: customer.restaurantName,
-                })
-              }
-              className="mt-2 rounded px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-50"
-            >
-              Reset Password
-            </button>
+            <div className="mt-2 flex gap-1">
+              <button
+                onClick={() =>
+                  onResetPassword({
+                    id: customer.id,
+                    email: customer.email,
+                    restaurantName: customer.restaurantName,
+                  })
+                }
+                className="rounded px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-50"
+              >
+                Reset Password
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm(`Delete ${customer.restaurantName || customer.email}? This cannot be undone.`)) {
+                    fetch(`/api/admin/customers/${customer.id}`, { method: "DELETE" })
+                      .then((r) => {
+                        if (r.ok) window.location.reload();
+                        else r.json().then((d) => alert(d.error || "Failed to delete"));
+                      })
+                      .catch(() => alert("An error occurred"));
+                  }
+                }}
+                className="rounded px-2 py-1 text-[10px] font-medium text-red-600 hover:bg-red-50"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -1379,18 +1396,35 @@ function UsersTab({
                   {new Date(customer.createdAt).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() =>
-                      onResetPassword({
-                        id: customer.id,
-                        email: customer.email,
-                        restaurantName: customer.restaurantName,
-                      })
-                    }
-                    className="text-xs font-medium text-emerald-600 hover:text-emerald-500"
-                  >
-                    Reset Password
-                  </button>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() =>
+                        onResetPassword({
+                          id: customer.id,
+                          email: customer.email,
+                          restaurantName: customer.restaurantName,
+                        })
+                      }
+                      className="text-xs font-medium text-emerald-600 hover:text-emerald-500"
+                    >
+                      Reset Password
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete ${customer.restaurantName || customer.email}? This cannot be undone.`)) {
+                          fetch(`/api/admin/customers/${customer.id}`, { method: "DELETE" })
+                            .then((r) => {
+                              if (r.ok) window.location.reload();
+                              else r.json().then((d) => alert(d.error || "Failed to delete"));
+                            })
+                            .catch(() => alert("An error occurred"));
+                        }
+                      }}
+                      className="text-xs font-medium text-red-600 hover:text-red-500"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -1502,6 +1536,21 @@ function PendingApprovalsTab({
                   className="flex-1 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 sm:flex-none sm:px-4 sm:py-2 sm:text-sm"
                 >
                   Reject
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Delete ${customer.restaurantName || customer.email}? This cannot be undone.`)) {
+                      fetch(`/api/admin/customers/${customer.id}`, { method: "DELETE" })
+                        .then((r) => {
+                          if (r.ok) window.location.reload();
+                          else r.json().then((d) => alert(d.error || "Failed to delete"));
+                        })
+                        .catch(() => alert("An error occurred"));
+                    }
+                  }}
+                  className="flex-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-50 sm:flex-none sm:px-4 sm:py-2 sm:text-sm"
+                >
+                  Delete
                 </button>
               </div>
             </div>

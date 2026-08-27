@@ -81,3 +81,52 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: targetUser } = await supabase.from('users').select('role').eq('id', id).single();
+    if (targetUser?.role === 'admin') {
+      return NextResponse.json({ error: "Cannot delete admin users" }, { status: 400 });
+    }
+
+    const { data: orders } = await supabase.from('orders').select('id').eq('user_id', id);
+    const orderIds = (orders || []).map((o) => o.id);
+
+    if (orderIds.length > 0) {
+      await supabase.from('order_items').delete().in('order_id', orderIds);
+      await supabase.from('orders').delete().in('id', orderIds);
+      await supabase.from('notifications').delete().in('order_id', orderIds);
+    }
+
+    await supabase.from('notifications').delete().eq('user_id', id);
+    await supabase.from('client_product_overrides').delete().eq('user_id', id);
+    await supabase.from('password_reset_tokens').delete().eq('user_id', id);
+
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Customer delete error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete customer" },
+      { status: 500 }
+    );
+  }
+}
