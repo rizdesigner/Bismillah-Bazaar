@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
+import { sendAccountApprovedEmail, sendAccountRejectedEmail } from "@/lib/email";
 
 export async function PATCH(
   req: NextRequest,
@@ -66,9 +67,9 @@ export async function PATCH(
     }
 
     if (status === "active") {
-      import('@/lib/email').then(m => m.sendAccountApprovedEmail(customer.email, customer.restaurant_name));
+      sendAccountApprovedEmail(customer.email, customer.restaurant_name);
     } else if (status === "suspended") {
-      import('@/lib/email').then(m => m.sendAccountRejectedEmail(customer.email, customer.restaurant_name));
+      sendAccountRejectedEmail(customer.email, customer.restaurant_name);
     }
 
     return NextResponse.json(customer);

@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
+import { sendNewRegistrationEmail } from '@/lib/email';
 
 export async function POST(req: Request) {
   try {
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
 
     const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
     if (adminEmails.length > 0) {
-      import('@/lib/email').then(m => m.sendNewRegistrationEmail(adminEmails, restaurantName, email, phone || null, location || null));
+      sendNewRegistrationEmail(adminEmails, restaurantName, email, phone || null, location || null);
     }
 
     return NextResponse.json({ success: true });

@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
+import { sendDeliveryReceipt, sendOrderConfirmedEmail, sendOrderModifiedEmail } from "@/lib/email";
 
 export async function PATCH(
   req: NextRequest,
@@ -111,18 +112,16 @@ export async function PATCH(
     const customerEmail = order.user?.email;
     const restaurantName = order.user?.restaurant_name || '';
 
-    const emailMod = await import('@/lib/email').catch(() => null);
-
-    if (status && status !== order.status && status === "confirmed" && customerEmail && emailMod) {
-      emailMod.sendOrderConfirmedEmail(customerEmail, restaurantName, updatedOrder.order_number, Number(updateData.final_total ?? updatedOrder.final_total ?? updatedOrder.original_total));
+    if (status && status !== order.status && status === "confirmed" && customerEmail) {
+      sendOrderConfirmedEmail(customerEmail, restaurantName, updatedOrder.order_number, Number(updateData.final_total ?? updatedOrder.final_total ?? updatedOrder.original_total));
     }
 
-    if (changes.length > 0 && customerEmail && emailMod && !(status === "confirmed" && status !== order.status)) {
-      emailMod.sendOrderModifiedEmail(customerEmail, restaurantName, updatedOrder.order_number, changes, Number(updateData.final_total ?? updatedOrder.final_total ?? updatedOrder.original_total));
+    if (changes.length > 0 && customerEmail && !(status === "confirmed" && status !== order.status)) {
+      sendOrderModifiedEmail(customerEmail, restaurantName, updatedOrder.order_number, changes, Number(updateData.final_total ?? updatedOrder.final_total ?? updatedOrder.original_total));
     }
 
-    if (status === "delivered" && customerEmail && emailMod) {
-      await emailMod.sendDeliveryReceipt(
+    if (status === "delivered" && customerEmail) {
+      await sendDeliveryReceipt(
         order.user.email,
         updatedOrder.order_number,
         updatedOrder,
