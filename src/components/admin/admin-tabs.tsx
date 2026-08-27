@@ -1059,17 +1059,20 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
     return orderMonth === selectedMonth;
   });
 
-  const flattenedOrders = filteredOrders.flatMap((order) =>
-    order.items.map((item) => ({
-      orderNumber: order.orderNumber,
-      restaurantName: order.user.restaurantName || "N/A",
+  const orderGroups = filteredOrders.map((order) => ({
+    orderNumber: order.orderNumber,
+    restaurantName: order.user.restaurantName || "N/A",
+    deliveredAt: order.deliveredAt,
+    total: order.finalTotal || order.originalTotal,
+    items: order.items.map((item) => ({
       itemName: item.item.itemName,
       chunkSize: item.requestedChunkSize || "",
       quantity: item.requestedKg,
       unitPrice: order.finalTotal && order.items.length > 0 ? order.finalTotal / order.items.length : order.originalTotal / order.items.length,
-      deliveredAt: order.deliveredAt,
-    }))
-  );
+    })),
+  }));
+
+  const totalItems = orderGroups.reduce((sum, g) => sum + g.items.length, 0);
 
   const handleExportCSV = () => {
     const headers = [
@@ -1082,15 +1085,17 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
       "Delivered",
     ];
 
-    const rows = flattenedOrders.map((row) => [
-      row.orderNumber,
-      row.restaurantName,
-      row.itemName,
-      row.chunkSize,
-      row.quantity.toString(),
-      row.unitPrice ? `$${row.unitPrice.toFixed(2)}` : "—",
-      row.deliveredAt ? new Date(row.deliveredAt).toLocaleDateString() : "—",
-    ]);
+    const rows = orderGroups.flatMap((group) =>
+      group.items.map((item) => [
+        group.orderNumber,
+        group.restaurantName,
+        item.itemName,
+        item.chunkSize,
+        item.quantity.toString(),
+        item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : "—",
+        group.deliveredAt ? new Date(group.deliveredAt).toLocaleDateString() : "—",
+      ])
+    );
 
     const csvContent = [
       headers.join(","),
@@ -1146,7 +1151,7 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
 
         <button
           onClick={handleExportCSV}
-          disabled={flattenedOrders.length === 0}
+          disabled={totalItems === 0}
           className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1156,48 +1161,59 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
         </button>
 
         <span className="text-xs text-zinc-500">
-          {flattenedOrders.length} item{flattenedOrders.length !== 1 ? "s" : ""}
+          {orderGroups.length} order{orderGroups.length !== 1 ? "s" : ""} · {totalItems} item{totalItems !== 1 ? "s" : ""}
         </span>
       </div>
 
-      {flattenedOrders.length === 0 && (
+      {orderGroups.length === 0 && (
         <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center sm:p-12">
           <p className="text-xs text-zinc-500 sm:text-sm">No delivered orders for this month</p>
         </div>
       )}
 
       {/* Mobile: Card Layout */}
-      <div className="space-y-2 sm:hidden">
-        {flattenedOrders.map((row, idx) => (
+      <div className="space-y-3 sm:hidden">
+        {orderGroups.map((group) => (
           <div
-            key={`${row.orderNumber}-${row.itemName}-${idx}`}
-            className="rounded-lg border border-zinc-200 bg-white p-3"
+            key={group.orderNumber}
+            className="overflow-hidden rounded-lg border border-zinc-200 bg-white"
           >
-            <div className="flex items-center gap-2">
-              <span className="inline-flex rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-700">
-                {row.orderNumber}
-              </span>
-              <span className="text-[10px] text-zinc-500">
-                {row.deliveredAt ? new Date(row.deliveredAt).toLocaleDateString() : "—"}
-              </span>
+            <div className="border-b border-zinc-100 bg-zinc-50 px-3 py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                    {group.orderNumber}
+                  </span>
+                  <span className="text-xs font-medium text-zinc-900">
+                    {group.restaurantName}
+                  </span>
+                </div>
+                <span className="text-[10px] text-zinc-500">
+                  {group.deliveredAt ? new Date(group.deliveredAt).toLocaleDateString() : "—"}
+                </span>
+              </div>
             </div>
-            <h4 className="mt-1.5 text-sm font-medium text-zinc-900">
-              {row.restaurantName}
-            </h4>
-            <div className="mt-1 space-y-0.5 text-xs text-zinc-600">
-              <p>{row.itemName}</p>
-              {row.chunkSize && <p>Chunk: {row.chunkSize}</p>}
-            </div>
-            <div className="mt-2 flex items-center gap-3 text-[10px] text-zinc-600">
-              <span>{row.quantity} lb</span>
-              <span>•</span>
-              <span>{row.unitPrice ? `$${row.unitPrice.toFixed(2)}` : "—"}</span>
+            <div className="divide-y divide-zinc-50">
+              {group.items.map((item, i) => (
+                <div key={i} className="flex items-center justify-between px-3 py-2">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-zinc-900">{item.itemName}</p>
+                    {item.chunkSize && (
+                      <p className="text-[10px] text-zinc-500">Chunk: {item.chunkSize}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-[10px] text-zinc-600">
+                    <span>{item.quantity} lb</span>
+                    <span>{item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : "—"}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Desktop: Table Layout */}
+      {/* Desktop: Grouped Table */}
       <div className="hidden overflow-x-auto rounded-lg border border-zinc-200 bg-white sm:block">
         <table className="w-full min-w-[700px]">
           <thead className="border-b border-zinc-200 bg-zinc-50">
@@ -1225,30 +1241,37 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
-            {flattenedOrders.map((row, idx) => (
-              <tr key={`${row.orderNumber}-${row.itemName}-${idx}`} className="hover:bg-zinc-50">
-                <td className="px-4 py-3 text-sm font-medium text-zinc-900">
-                  {row.orderNumber}
-                </td>
-                <td className="px-4 py-3 text-sm font-medium text-zinc-900">
-                  {row.restaurantName}
-                </td>
-                <td className="px-4 py-3 text-sm text-zinc-900">{row.itemName}</td>
-                <td className="px-4 py-3 text-sm text-zinc-600">
-                  {row.chunkSize || "—"}
-                </td>
-                <td className="px-4 py-3 text-right text-sm text-zinc-900">
-                  {row.quantity}
-                </td>
-                <td className="px-4 py-3 text-right text-sm font-medium text-zinc-900">
-                  {row.unitPrice ? `$${row.unitPrice.toFixed(2)}` : "—"}
-                </td>
-                <td className="px-4 py-3 text-sm text-zinc-900">
-                  {row.deliveredAt ? new Date(row.deliveredAt).toLocaleDateString() : "—"}
-                </td>
-              </tr>
-            ))}
+          <tbody>
+            {orderGroups.map((group) =>
+              group.items.map((item, i) => (
+                <tr
+                  key={`${group.orderNumber}-${i}`}
+                  className={`border-b border-zinc-50 hover:bg-zinc-50 ${i > 0 ? "bg-zinc-25" : ""}`}
+                >
+                  {i === 0 ? (
+                    <>
+                      <td className="px-4 py-3 text-sm font-semibold text-zinc-900" rowSpan={group.items.length}>
+                        {group.orderNumber}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-zinc-900" rowSpan={group.items.length}>
+                        {group.restaurantName}
+                      </td>
+                    </>
+                  ) : null}
+                  <td className="px-4 py-3 text-sm text-zinc-900">{item.itemName}</td>
+                  <td className="px-4 py-3 text-sm text-zinc-600">{item.chunkSize || "—"}</td>
+                  <td className="px-4 py-3 text-right text-sm text-zinc-900">{item.quantity}</td>
+                  <td className="px-4 py-3 text-right text-sm font-medium text-zinc-900">
+                    {item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : "—"}
+                  </td>
+                  {i === 0 ? (
+                    <td className="px-4 py-3 text-sm text-zinc-900" rowSpan={group.items.length}>
+                      {group.deliveredAt ? new Date(group.deliveredAt).toLocaleDateString() : "—"}
+                    </td>
+                  ) : null}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
