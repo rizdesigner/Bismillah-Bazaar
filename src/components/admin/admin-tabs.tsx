@@ -573,7 +573,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
   });
   const [loading, setLoading] = useState(false);
   const [paymentFilter, setPaymentFilter] = useState<"all" | "unpaid" | "paid" | "overdue">("all");
-  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
 
   const filteredOrders = orders.filter((order) => {
     if (paymentFilter === "all") return true;
@@ -607,18 +607,24 @@ function OrdersTab({ orders }: { orders: Order[] }) {
     }))
   );
 
-  const handleMarkAsPaid = async (orderId: string, paymentMethod: string) => {
-    setMarkingPaid(orderId);
+  const handleConfirmOrder = async (orderId: string) => {
+    const eta = prompt("Estimated delivery date/time (e.g. 2026-08-30 10:00):");
+    if (eta === null) return;
+
+    setConfirming(orderId);
     try {
       const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentStatus: "paid", paymentMethod }),
+        body: JSON.stringify({
+          status: "confirmed",
+          adminEta: eta || null,
+        }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error || "Failed to mark as paid");
+        alert(data.error || "Failed to confirm order");
         return;
       }
 
@@ -626,7 +632,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
     } catch {
       alert("An error occurred");
     } finally {
-      setMarkingPaid(null);
+      setConfirming(null);
     }
   };
 
@@ -753,16 +759,13 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 >
                   Edit
                 </button>
-                {row.paymentStatus !== "paid" && (
+                {row.status === "pending" && (
                   <button
-                    onClick={() => {
-                      const method = prompt("Payment method (etransfer/cash/check/credit_card):");
-                      if (method) handleMarkAsPaid(row.orderId, method);
-                    }}
-                    disabled={markingPaid === row.orderId}
+                    onClick={() => handleConfirmOrder(row.orderId)}
+                    disabled={confirming === row.orderId}
                     className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
                   >
-                    {markingPaid === row.orderId ? "..." : "Mark Paid"}
+                    {confirming === row.orderId ? "..." : "Confirm"}
                   </button>
                 )}
               </div>
@@ -876,16 +879,13 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                     >
                       Edit
                     </button>
-                    {row.paymentStatus !== "paid" && (
+                    {row.status === "pending" && (
                       <button
-                        onClick={() => {
-                          const method = prompt("Payment method (etransfer/cash/check/credit_card):");
-                          if (method) handleMarkAsPaid(row.orderId, method);
-                        }}
-                        disabled={markingPaid === row.orderId}
+                        onClick={() => handleConfirmOrder(row.orderId)}
+                        disabled={confirming === row.orderId}
                         className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
                       >
-                        {markingPaid === row.orderId ? "..." : "Mark Paid"}
+                        {confirming === row.orderId ? "..." : "Confirm"}
                       </button>
                     )}
                   </div>
