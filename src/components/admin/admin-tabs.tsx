@@ -679,6 +679,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                   {order.requestedEta && <p>Req: {new Date(order.requestedEta).toLocaleString()}</p>}
                   {order.adminEta && <p className="font-medium text-emerald-700">Admin: {new Date(order.adminEta).toLocaleString()}</p>}
                   {order.note && <p className="mt-1 italic text-zinc-500">Note: {order.note}</p>}
+                  <p className="mt-1 font-semibold text-zinc-900">Total: {order.finalTotal ? `$${order.finalTotal.toFixed(2)}` : `$${order.originalTotal.toFixed(2)}`}</p>
                 </div>
               </div>
               <div className="flex flex-col gap-1">
@@ -729,7 +730,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 Qty (lb)
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                Final Price
+                Total
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Delivery
@@ -1182,6 +1183,14 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
                 </div>
               ))}
             </div>
+            <div className="border-t border-zinc-100 bg-zinc-50 px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-zinc-500">Total</span>
+                <span className="text-xs font-semibold text-zinc-900">
+                  {group.total ? `$${Number(group.total).toFixed(2)}` : "—"}
+                </span>
+              </div>
+            </div>
           </div>
         ))}
       </div>
@@ -1208,6 +1217,9 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Final Price
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Total
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Delivered
@@ -1242,6 +1254,9 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
                   </td>
                   {i === 0 ? (
                     <>
+                      <td className="px-4 py-3 text-right text-sm font-semibold text-zinc-900" rowSpan={group.items.length}>
+                        {group.total ? `$${Number(group.total).toFixed(2)}` : "—"}
+                      </td>
                       <td className="px-4 py-3 text-sm text-zinc-900" rowSpan={group.items.length}>
                         {group.deliveredAt ? new Date(group.deliveredAt).toLocaleDateString() : "—"}
                       </td>
