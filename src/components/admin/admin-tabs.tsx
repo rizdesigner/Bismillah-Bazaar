@@ -569,39 +569,6 @@ function OrdersTab({ orders }: { orders: Order[] }) {
     status: "pending",
   });
   const [loading, setLoading] = useState(false);
-  const [paymentFilter, setPaymentFilter] = useState<"all" | "unpaid" | "paid" | "overdue">("all");
-
-  const filteredOrders = orders.filter((order) => {
-    if (paymentFilter === "all") return true;
-    if (paymentFilter === "paid") return order.paymentStatus === "paid";
-    if (paymentFilter === "unpaid") return order.paymentStatus === "unpaid";
-    if (paymentFilter === "overdue") {
-      return order.paymentStatus !== "paid" && order.dueDate && new Date(order.dueDate) < new Date();
-    }
-    return true;
-  });
-
-  const flattenedOrders = filteredOrders.flatMap((order) =>
-    order.items.map((item) => ({
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      restaurantName: order.user.restaurantName || "N/A",
-      phone: order.user.phone || "N/A",
-      email: order.user.email,
-      itemName: item.item.itemName,
-      quantity: item.requestedKg,
-      fulfilledQty: item.fulfilledKg,
-      requestedChunkSize: item.requestedChunkSize,
-      finalPrice: order.finalTotal ? order.finalTotal / order.items.length : null,
-      requestedEta: order.requestedEta,
-      adminEta: order.adminEta,
-      createdAt: order.createdAt,
-      status: order.status,
-      paymentStatus: order.paymentStatus,
-      dueDate: order.dueDate,
-      note: order.note,
-    }))
-  );
 
   const handleConfirmOrder = (order: Order) => {
     setEditingOrder(order);
@@ -627,6 +594,24 @@ function OrdersTab({ orders }: { orders: Order[] }) {
       adminEta: order.adminEta ? new Date(order.adminEta).toISOString().slice(0, 16) : "",
       status: order.status,
     });
+  };
+
+  const handleDeliver = async (orderId: string) => {
+    if (!confirm("Mark this order as delivered?")) return;
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "delivered" }),
+      });
+      if (res.ok) window.location.reload();
+      else {
+        const data = await res.json();
+        alert(data.error || "Failed to mark as delivered");
+      }
+    } catch {
+      alert("An error occurred");
+    }
   };
 
   const handleSave = async () => {
@@ -657,28 +642,11 @@ function OrdersTab({ orders }: { orders: Order[] }) {
 
   return (
     <div>
-      {/* Payment Status Filters */}
-      <div className="mb-4 flex gap-2">
-        {(["all", "unpaid", "overdue", "paid"] as const).map((filter) => (
-          <button
-            key={filter}
-            onClick={() => setPaymentFilter(filter)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm ${
-              paymentFilter === filter
-                ? "bg-emerald-600 text-white"
-                : "bg-white text-zinc-700 hover:bg-zinc-50"
-            }`}
-          >
-            {filter.charAt(0).toUpperCase() + filter.slice(1)}
-          </button>
-        ))}
-      </div>
-
       {/* Mobile: Card Layout */}
       <div className="space-y-2 sm:hidden">
-        {flattenedOrders.map((row, idx) => (
+        {orders.map((order) => (
           <div
-            key={`${row.orderId}-${row.itemName}-${idx}`}
+            key={order.id}
             className="rounded-lg border border-zinc-200 bg-white p-3"
           >
             <div className="flex items-start justify-between">
@@ -686,69 +654,55 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 <div className="flex items-center gap-2">
                   <span
                     className={`inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                      row.status === "pending"
+                      order.status === "pending"
                         ? "bg-amber-100 text-amber-700"
-                        : row.status === "modified"
+                        : order.status === "modified"
                         ? "bg-blue-100 text-blue-700"
-                        : row.status === "confirmed"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-zinc-100 text-zinc-700"
+                        : "bg-emerald-100 text-emerald-700"
                     }`}
                   >
-                    {row.status}
-                  </span>
-                  <span
-                    className={`inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                      row.paymentStatus === "paid"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : row.paymentStatus === "overdue"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {row.paymentStatus}
+                    {order.status}
                   </span>
                 </div>
                 <p className="mt-1 text-[10px] font-medium text-zinc-500">
-                  {row.orderNumber}
+                  {order.orderNumber}
                 </p>
                 <h4 className="mt-0.5 text-sm font-medium text-zinc-900">
-                  {row.restaurantName}
+                  {order.user.restaurantName || "N/A"}
                 </h4>
-                <p className="mt-0.5 text-xs text-zinc-600">{row.itemName}{row.requestedChunkSize ? ` (${row.requestedChunkSize})` : ""}</p>
+                {order.items.map((item, i) => (
+                  <p key={i} className="mt-0.5 text-xs text-zinc-600">
+                    {item.item.itemName}{item.requestedChunkSize ? ` (${item.requestedChunkSize})` : ""} — {item.requestedKg}lb
+                  </p>
+                ))}
                 <div className="mt-2 space-y-0.5 text-[10px] text-zinc-600">
-                  <p>Qty: {row.quantity}lb {row.fulfilledQty !== row.quantity && `→ ${row.fulfilledQty}lb`}</p>
-                  <p>Price: {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}</p>
-                  {row.requestedEta && <p>Req: {new Date(row.requestedEta).toLocaleString()}</p>}
-                  {row.adminEta && <p className="font-medium text-emerald-700">Admin: {new Date(row.adminEta).toLocaleString()}</p>}
-                  {row.dueDate && row.paymentStatus !== "paid" && (
-                    <p className={new Date(row.dueDate) < new Date() ? "font-medium text-red-600" : ""}>
-                      Due: {new Date(row.dueDate).toLocaleDateString()}
-                    </p>
-                  )}
-                  {row.note && <p className="mt-1 italic text-zinc-500">Note: {row.note}</p>}
+                  {order.requestedEta && <p>Req: {new Date(order.requestedEta).toLocaleString()}</p>}
+                  {order.adminEta && <p className="font-medium text-emerald-700">Admin: {new Date(order.adminEta).toLocaleString()}</p>}
+                  {order.note && <p className="mt-1 italic text-zinc-500">Note: {order.note}</p>}
                 </div>
               </div>
               <div className="flex flex-col gap-1">
-                {row.status === "pending" ? (
+                {order.status === "pending" ? (
                   <button
-                    onClick={() => {
-                      const order = orders.find((o) => o.id === row.orderId);
-                      if (order) handleConfirmOrder(order);
-                    }}
+                    onClick={() => handleConfirmOrder(order)}
                     className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-emerald-500"
                   >
                     Confirm
                   </button>
                 ) : (
                   <button
-                    onClick={() => {
-                      const order = orders.find((o) => o.id === row.orderId);
-                      if (order) handleEdit(order);
-                    }}
+                    onClick={() => handleEdit(order)}
                     className="rounded px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-50"
                   >
                     Edit
+                  </button>
+                )}
+                {order.status === "confirmed" && (
+                  <button
+                    onClick={() => handleDeliver(order.id)}
+                    className="rounded bg-zinc-800 px-2 py-1 text-[10px] font-medium text-white hover:bg-zinc-700"
+                  >
+                    Deliver
                   </button>
                 )}
               </div>
@@ -759,7 +713,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
 
       {/* Desktop: Table Layout */}
       <div className="hidden overflow-x-auto rounded-lg border border-zinc-200 bg-white sm:block">
-        <table className="w-full min-w-[900px]">
+        <table className="w-full min-w-[800px]">
           <thead className="border-b border-zinc-200 bg-zinc-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
@@ -783,101 +737,93 @@ function OrdersTab({ orders }: { orders: Order[] }) {
               <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Status
               </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                Payment
-              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
-            {flattenedOrders.map((row, idx) => (
-              <tr key={`${row.orderId}-${row.itemName}-${idx}`} className="hover:bg-zinc-50">
-                <td className="px-4 py-3 text-sm font-medium text-zinc-900">
-                  {row.orderNumber}
-                </td>
-                <td className="px-4 py-3 text-sm font-medium text-zinc-900">
-                  {row.restaurantName}
-                </td>
-                <td className="px-4 py-3 text-sm text-zinc-900">{row.itemName}{row.requestedChunkSize ? ` (${row.requestedChunkSize})` : ""}</td>
-                <td className="px-4 py-3 text-right text-sm text-zinc-900">
-                  {row.quantity}
-                  {row.fulfilledQty !== row.quantity && (
-                    <span className="ml-1 text-xs text-emerald-600">
-                      → {row.fulfilledQty}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right text-sm font-medium text-zinc-900">
-                  {row.finalPrice ? `$${row.finalPrice.toFixed(2)}` : "—"}
-                </td>
-                <td className="px-4 py-3 text-sm text-zinc-600">
-                  {row.requestedEta && <div className="text-xs">Req: {new Date(row.requestedEta).toLocaleString()}</div>}
-                  {row.adminEta && <div className="text-xs font-medium text-emerald-700">Admin: {new Date(row.adminEta).toLocaleString()}</div>}
-                  {row.note && <div className="mt-1 text-xs italic text-zinc-500">Note: {row.note}</div>}
-                  {!row.requestedEta && !row.adminEta && !row.note && "—"}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span
-                    className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                      row.status === "pending"
-                        ? "bg-amber-100 text-amber-700"
-                        : row.status === "modified"
-                        ? "bg-blue-100 text-blue-700"
-                        : row.status === "confirmed"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-zinc-100 text-zinc-700"
-                    }`}
-                  >
-                    {row.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span
-                    className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                      row.paymentStatus === "paid"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : row.paymentStatus === "overdue"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {row.paymentStatus}
-                  </span>
-                  {row.dueDate && row.paymentStatus !== "paid" && (
-                    <div className={`mt-1 text-[10px] ${new Date(row.dueDate) < new Date() ? "font-medium text-red-600" : "text-zinc-500"}`}>
-                      Due: {new Date(row.dueDate).toLocaleDateString()}
-                    </div>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex justify-end gap-2">
-                    {row.status === "pending" ? (
-                      <button
-                        onClick={() => {
-                          const order = orders.find((o) => o.id === row.orderId);
-                          if (order) handleConfirmOrder(order);
-                        }}
-                        className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500"
-                      >
-                        Confirm
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          const order = orders.find((o) => o.id === row.orderId);
-                          if (order) handleEdit(order);
-                        }}
-                        className="text-xs font-medium text-emerald-600 hover:text-emerald-500"
-                      >
-                        Edit
-                      </button>
+            {orders.map((order) =>
+              order.items.map((item, i) => (
+                <tr
+                  key={`${order.id}-${i}`}
+                  className="hover:bg-zinc-50"
+                >
+                  {i === 0 ? (
+                    <>
+                      <td className="px-4 py-3 text-sm font-medium text-zinc-900" rowSpan={order.items.length}>
+                        {order.orderNumber}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-zinc-900" rowSpan={order.items.length}>
+                        {order.user.restaurantName || "N/A"}
+                      </td>
+                    </>
+                  ) : null}
+                  <td className="px-4 py-3 text-sm text-zinc-900">
+                    {item.item.itemName}{item.requestedChunkSize ? ` (${item.requestedChunkSize})` : ""}
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm text-zinc-900">
+                    {item.requestedKg}
+                    {item.fulfilledKg != null && item.fulfilledKg !== item.requestedKg && (
+                      <span className="ml-1 text-xs text-emerald-600">→ {item.fulfilledKg}</span>
                     )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  {i === 0 ? (
+                    <>
+                      <td className="px-4 py-3 text-right text-sm font-medium text-zinc-900" rowSpan={order.items.length}>
+                        {order.finalTotal ? `$${order.finalTotal.toFixed(2)}` : `$${order.originalTotal.toFixed(2)}`}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-zinc-600" rowSpan={order.items.length}>
+                        {order.requestedEta && <div className="text-xs">Req: {new Date(order.requestedEta).toLocaleDateString()}</div>}
+                        {order.adminEta && <div className="text-xs font-medium text-emerald-700">Admin: {new Date(order.adminEta).toLocaleDateString()}</div>}
+                        {order.note && <div className="mt-1 text-xs italic text-zinc-500">Note: {order.note}</div>}
+                        {!order.requestedEta && !order.adminEta && !order.note && "—"}
+                      </td>
+                      <td className="px-4 py-3 text-center" rowSpan={order.items.length}>
+                        <span
+                          className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                            order.status === "pending"
+                              ? "bg-amber-100 text-amber-700"
+                              : order.status === "modified"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right" rowSpan={order.items.length}>
+                        <div className="flex justify-end gap-2">
+                          {order.status === "pending" ? (
+                            <button
+                              onClick={() => handleConfirmOrder(order)}
+                              className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500"
+                            >
+                              Confirm
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleEdit(order)}
+                              className="text-xs font-medium text-emerald-600 hover:text-emerald-500"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {order.status === "confirmed" && (
+                            <button
+                              onClick={() => handleDeliver(order.id)}
+                              className="rounded bg-zinc-800 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700"
+                            >
+                              Deliver
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </>
+                  ) : null}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -1060,6 +1006,7 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
   });
 
   const orderGroups = filteredOrders.map((order) => ({
+    orderId: order.id,
     orderNumber: order.orderNumber,
     restaurantName: order.user.restaurantName || "N/A",
     deliveredAt: order.deliveredAt,
@@ -1073,6 +1020,24 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
   }));
 
   const totalItems = orderGroups.reduce((sum, g) => sum + g.items.length, 0);
+
+  const handleUndo = async (orderId: string) => {
+    if (!confirm("Move this order back to active?")) return;
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "confirmed" }),
+      });
+      if (res.ok) window.location.reload();
+      else {
+        const data = await res.json();
+        alert(data.error || "Failed to undo");
+      }
+    } catch {
+      alert("An error occurred");
+    }
+  };
 
   const handleExportCSV = () => {
     const headers = [
@@ -1188,9 +1153,17 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
                     {group.restaurantName}
                   </span>
                 </div>
-                <span className="text-[10px] text-zinc-500">
-                  {group.deliveredAt ? new Date(group.deliveredAt).toLocaleDateString() : "—"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-zinc-500">
+                    {group.deliveredAt ? new Date(group.deliveredAt).toLocaleDateString() : "—"}
+                  </span>
+                  <button
+                    onClick={() => handleUndo(group.orderId)}
+                    className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-700 hover:bg-zinc-300"
+                  >
+                    Undo
+                  </button>
+                </div>
               </div>
             </div>
             <div className="divide-y divide-zinc-50">
@@ -1239,6 +1212,9 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">
                 Delivered
               </th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                Action
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -1265,9 +1241,19 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
                     {item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : "—"}
                   </td>
                   {i === 0 ? (
-                    <td className="px-4 py-3 text-sm text-zinc-900" rowSpan={group.items.length}>
-                      {group.deliveredAt ? new Date(group.deliveredAt).toLocaleDateString() : "—"}
-                    </td>
+                    <>
+                      <td className="px-4 py-3 text-sm text-zinc-900" rowSpan={group.items.length}>
+                        {group.deliveredAt ? new Date(group.deliveredAt).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right" rowSpan={group.items.length}>
+                        <button
+                          onClick={() => handleUndo(group.orderId)}
+                          className="rounded bg-zinc-200 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-300"
+                        >
+                          Undo
+                        </button>
+                      </td>
+                    </>
                   ) : null}
                 </tr>
               ))
