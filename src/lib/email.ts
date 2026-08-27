@@ -1,10 +1,10 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
-const FROM = process.env.EMAIL_FROM || 'noreply@bismillah-bazaar.com'
+const FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bismillah-bazaar-production.up.railway.app'
 
 async function sendEmail(to: string | string[], subject: string, html: string) {
   if (!RESEND_API_KEY) {
-    console.warn('RESEND_API_KEY not configured, email not sent:', subject)
+    console.error('[EMAIL] RESEND_API_KEY not configured — email NOT sent:', subject)
     return
   }
   try {
@@ -16,12 +16,14 @@ async function sendEmail(to: string | string[], subject: string, html: string) {
       },
       body: JSON.stringify({ from: FROM, to: Array.isArray(to) ? to : [to], subject, html }),
     })
+    const body = await res.text()
     if (!res.ok) {
-      const err = await res.text()
-      console.error('Resend error:', err)
+      console.error(`[EMAIL] Resend API error (${res.status}):`, body)
+    } else {
+      console.log(`[EMAIL] Sent "${subject}" to ${JSON.stringify(to)} — OK`)
     }
   } catch (e) {
-    console.error('Email send failed:', e)
+    console.error('[EMAIL] Send failed:', e)
   }
 }
 
