@@ -61,6 +61,17 @@ export function ClientPricingManager({
       if (res.ok) {
         const data = await res.json();
         setOverrides(data);
+        const existingMap = new Map(data.map((o: ClientOverride) => [o.itemId, o]));
+        const defaults: Record<string, PendingChange> = {};
+        for (const item of inventory) {
+          const existing = existingMap.get(item.id);
+          defaults[item.id] = {
+            itemId: item.id,
+            customPriceKg: existing?.customPriceKg ?? item.basePriceKg,
+            isAvailable: existing?.isAvailable ?? true,
+          };
+        }
+        setPendingChanges(defaults);
       }
     } catch (error) {
       console.error("Failed to fetch overrides:", error);
@@ -128,7 +139,14 @@ export function ClientPricingManager({
   }
 
   const overridesMap = new Map(overrides.map((o) => [o.itemId, o]));
-  const hasChanges = Object.keys(pendingChanges).length > 0;
+
+  const hasChanges = Object.values(pendingChanges).some((p) => {
+    const existing = overridesMap.get(p.itemId);
+    if (!existing && p.isAvailable) return true;
+    if (existing && !p.isAvailable) return true;
+    const existingPrice = existing?.customPriceKg ?? inventory.find((i) => i.id === p.itemId)?.basePriceKg ?? null;
+    return p.customPriceKg !== existingPrice;
+  });
 
   return (
     <div className="space-y-4">
