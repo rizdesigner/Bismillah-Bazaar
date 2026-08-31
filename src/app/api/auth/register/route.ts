@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
 import { sendNewRegistrationEmail } from '@/lib/email';
 
+const ADMIN_ALERT_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'bismillah.grocery.mart.2022@gmail.com';
+
 export async function POST(req: Request) {
   try {
     const { email, password, restaurantName, phone, location } = await req.json();
@@ -52,6 +54,9 @@ export async function POST(req: Request) {
       .eq('role', 'admin');
 
     const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
+    if (!adminEmails.includes(ADMIN_ALERT_EMAIL)) {
+      adminEmails.push(ADMIN_ALERT_EMAIL);
+    }
     if (adminEmails.length > 0) {
       sendNewRegistrationEmail(adminEmails, restaurantName, email, phone || null, location || null);
     }
