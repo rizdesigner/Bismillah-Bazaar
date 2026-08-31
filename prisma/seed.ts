@@ -13,7 +13,7 @@ async function main() {
 
   const admin = await prisma.user.create({
     data: {
-      email: "admin@bismillahbazaar.com",
+      email: "bismillah.grocery.mart.2022@gmail.com",
       password: await bcrypt.hash("admin123", 10),
       role: "admin",
       restaurantName: "Bismillah Bazaar Wholesale",
