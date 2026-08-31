@@ -5,6 +5,8 @@ import { NextResponse, NextRequest } from "next/server";
 import { generateOrderNumber } from "@/lib/order-number";
 import { sendOrderPlacedEmail, sendNewOrderAlertEmail } from "@/lib/email";
 
+const ADMIN_ALERT_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'bismillah.grocery.mart.2022@gmail.com';
+
 function parseChunkGrams(chunkSize: string): number | null {
   const match = chunkSize.match(/(\d+(?:\.\d+)?)\s*g/i);
   return match ? parseFloat(match[1]) : null;
@@ -158,7 +160,7 @@ export async function POST(req: NextRequest) {
     });
 
     sendOrderPlacedEmail(user.email!, customerProfile?.restaurant_name || '', orderNumber, itemDetails, originalTotal);
-    sendNewOrderAlertEmail(['admin@bismillahbazaar.com'], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, originalTotal);
+    sendNewOrderAlertEmail([ADMIN_ALERT_EMAIL], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, originalTotal);
 
     return NextResponse.json({ orderId: order.id });
   } catch (error) {
