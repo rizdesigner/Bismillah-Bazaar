@@ -66,7 +66,7 @@ type Props = {
 };
 
 export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Props) {
-  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered" | "pricing">("inventory");
+  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "users" | "pending" | "delivered" | "paid" | "pricing">("inventory");
   const [resetTarget, setResetTarget] = useState<{
     id: string;
     email: string;
@@ -75,11 +75,13 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
 
   const activeOrders = orders.filter((o) => o.status !== "delivered");
   const deliveredOrders = orders.filter((o) => o.status === "delivered");
+  const paidOrders = orders.filter((o) => o.paymentStatus === "paid");
 
   const tabs = [
     { id: "inventory" as const, label: "Inventory", count: inventory.length },
     { id: "orders" as const, label: "Orders", count: activeOrders.length },
     { id: "delivered" as const, label: "Delivered", count: deliveredOrders.length },
+    { id: "paid" as const, label: "Paid", count: paidOrders.length },
     { id: "users" as const, label: "Active", count: customers.length },
     { id: "pending" as const, label: "Pending", count: pendingCustomers.length },
     { id: "pricing" as const, label: "Pricing", count: null },
@@ -113,9 +115,11 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
       {activeTab === "inventory" && <InventoryTab inventory={inventory} />}
       {activeTab === "orders" && <OrdersTab orders={activeOrders} />}
       {activeTab === "delivered" && <DeliveredOrdersTab orders={deliveredOrders} />}
+      {activeTab === "paid" && <PaidOrdersTab orders={paidOrders} />}
       {activeTab === "users" && <UsersTab customers={customers} onResetPassword={setResetTarget} />}
       {activeTab === "pending" && <PendingApprovalsTab customers={pendingCustomers} onResetPassword={setResetTarget} />}
-      {activeTab === "pricing" && (
+
+      <div className={activeTab === "pricing" ? "block" : "hidden"}>
         <ClientPricingManager
           customers={customers}
           inventory={inventory.map((item) => ({
@@ -125,7 +129,7 @@ export function AdminTabs({ inventory, orders, customers, pendingCustomers }: Pr
             basePriceKg: item.basePriceKg,
           }))}
         />
-      )}
+      </div>
 
       <ResetLinkModal user={resetTarget} onClose={() => setResetTarget(null)} />
     </div>
@@ -1011,6 +1015,7 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
     orderNumber: order.orderNumber,
     restaurantName: order.user.restaurantName || "N/A",
     deliveredAt: order.deliveredAt,
+    paymentStatus: order.paymentStatus,
     total: order.finalTotal || order.originalTotal,
     items: order.items.map((item) => ({
       itemName: item.item.itemName,
@@ -1034,6 +1039,24 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
       else {
         const data = await res.json();
         alert(data.error || "Failed to undo");
+      }
+    } catch {
+      alert("An error occurred");
+    }
+  };
+
+  const handleMarkPaid = async (orderId: string) => {
+    if (!confirm("Mark this order as paid?")) return;
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentStatus: "paid" }),
+      });
+      if (res.ok) window.location.reload();
+      else {
+        const data = await res.json();
+        alert(data.error || "Failed to mark as paid");
       }
     } catch {
       alert("An error occurred");
@@ -1155,6 +1178,14 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
+                  {group.paymentStatus !== "paid" && (
+                    <button
+                      onClick={() => handleMarkPaid(group.orderId)}
+                      className="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-emerald-500"
+                    >
+                      Mark Paid
+                    </button>
+                  )}
                   <span className="text-[10px] text-zinc-500">
                     {group.deliveredAt ? new Date(group.deliveredAt).toLocaleDateString() : "—"}
                   </span>
@@ -1261,18 +1292,127 @@ function DeliveredOrdersTab({ orders }: { orders: Order[] }) {
                         {group.deliveredAt ? new Date(group.deliveredAt).toLocaleDateString() : "—"}
                       </td>
                       <td className="px-4 py-3 text-right" rowSpan={group.items.length}>
-                        <button
-                          onClick={() => handleUndo(group.orderId)}
-                          className="rounded bg-zinc-200 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-300"
-                        >
-                          Undo
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          {group.paymentStatus !== "paid" && (
+                            <button
+                              onClick={() => handleMarkPaid(group.orderId)}
+                              className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500"
+                            >
+                              Mark Paid
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleUndo(group.orderId)}
+                            className="rounded bg-zinc-200 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-300"
+                          >
+                            Undo
+                          </button>
+                        </div>
                       </td>
                     </>
                   ) : null}
                 </tr>
               ))
             )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PaidOrdersTab({ orders }: { orders: Order[] }) {
+  const sorted = [...orders].sort(
+    (a, b) => new Date(b.paidAt || b.createdAt).getTime() - new Date(a.paidAt || a.createdAt).getTime()
+  );
+
+  const grandTotal = sorted.reduce(
+    (sum, o) => sum + Number(o.finalTotal || o.originalTotal || 0),
+    0
+  );
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <span className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+          {sorted.length} paid order{sorted.length !== 1 ? "s" : ""} · ${grandTotal.toFixed(2)} received
+        </span>
+      </div>
+
+      {sorted.length === 0 && (
+        <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center sm:p-12">
+          <p className="text-xs text-zinc-500 sm:text-sm">No paid orders yet</p>
+        </div>
+      )}
+
+      {/* Mobile: Card Layout */}
+      <div className="space-y-3 sm:hidden">
+        {sorted.map((order) => (
+          <div key={order.id} className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+            <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50 px-3 py-2">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  {order.orderNumber}
+                </span>
+                <span className="text-xs font-medium text-zinc-900">
+                  {order.user.restaurantName || "N/A"}
+                </span>
+              </div>
+              <span className="text-[10px] text-zinc-500">
+                Paid {new Date(order.paidAt || order.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="divide-y divide-zinc-50">
+              {order.items.map((item, i) => (
+                <div key={i} className="flex items-center justify-between px-3 py-2">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-zinc-900">{item.item.itemName}</p>
+                    {item.requestedChunkSize && (
+                      <p className="text-[10px] text-zinc-500">Chunk: {item.requestedChunkSize}</p>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-zinc-600">{item.requestedKg} lb</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50 px-3 py-2">
+              <span className="text-[10px] text-zinc-500">Paid Total</span>
+              <span className="text-xs font-semibold text-emerald-700">
+                ${Number(order.finalTotal || order.originalTotal).toFixed(2)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: Table */}
+      <div className="hidden overflow-x-auto rounded-lg border border-zinc-200 bg-white sm:block">
+        <table className="w-full min-w-[700px]">
+          <thead className="border-b border-zinc-200 bg-zinc-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">Order #</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">Restaurant</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">Items</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-600">Total</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600">Paid On</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((order) => (
+              <tr key={order.id} className="border-b border-zinc-50 hover:bg-zinc-50">
+                <td className="px-4 py-3 text-sm font-semibold text-zinc-900">{order.orderNumber}</td>
+                <td className="px-4 py-3 text-sm font-medium text-zinc-900">{order.user.restaurantName || "N/A"}</td>
+                <td className="px-4 py-3 text-sm text-zinc-600">
+                  {order.items.map((i) => i.item.itemName).join(", ")}
+                </td>
+                <td className="px-4 py-3 text-right text-sm font-semibold text-emerald-700">
+                  ${Number(order.finalTotal || order.originalTotal).toFixed(2)}
+                </td>
+                <td className="px-4 py-3 text-sm text-zinc-900">
+                  {new Date(order.paidAt || order.createdAt).toLocaleDateString()}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

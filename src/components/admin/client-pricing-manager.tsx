@@ -37,7 +37,10 @@ export function ClientPricingManager({
   customers: Customer[];
   inventory: InventoryItem[];
 }) {
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return sessionStorage.getItem("bb_pricing_selected_customer") || "";
+  });
   const [overrides, setOverrides] = useState<ClientOverride[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -156,7 +159,12 @@ export function ClientPricingManager({
         </label>
         <select
           value={selectedCustomerId}
-          onChange={(e) => setSelectedCustomerId(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setSelectedCustomerId(v);
+            if (v) sessionStorage.setItem("bb_pricing_selected_customer", v);
+            else sessionStorage.removeItem("bb_pricing_selected_customer");
+          }}
           className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
         >
           <option value="">Choose a customer...</option>

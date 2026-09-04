@@ -50,10 +50,27 @@ export async function POST(req: Request) {
 
     const { data: admins } = await supabase
       .from('users')
-      .select('email')
+      .select('id, email')
       .eq('role', 'admin');
 
-    const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
+    const adminEmails = (admins || [])
+      .map((a) => a.email)
+      .filter(Boolean);
+
+    const adminIds = (admins || [])
+      .map((a) => a.id)
+      .filter(Boolean);
+
+    // Create an in-app notification for every admin
+    for (const adminId of adminIds) {
+      await supabase.from('notifications').insert({
+        user_id: adminId,
+        type: 'new_registration',
+        title: 'New Restaurant Registration',
+        message: `${restaurantName} (${email}) has registered and is awaiting approval.`,
+      });
+    }
+
     if (!adminEmails.includes(ADMIN_ALERT_EMAIL)) {
       adminEmails.push(ADMIN_ALERT_EMAIL);
     }

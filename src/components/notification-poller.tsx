@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useSession } from "./session-provider";
 import { emitToast } from "@/lib/toast-events";
+import { playNotificationSound } from "@/lib/sound";
 
 export function NotificationPoller() {
   const { profile } = useSession();
@@ -28,6 +29,7 @@ export function NotificationPoller() {
         );
 
         if (newNotifications.length > 0) {
+          playNotificationSound();
           newNotifications.forEach((n: {
             id: string;
             title: string;

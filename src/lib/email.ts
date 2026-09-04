@@ -173,6 +173,25 @@ export async function sendOrderModifiedEmail(
   `))
 }
 
+export async function sendOrderPaidEmail(
+  email: string,
+  restaurantName: string,
+  orderNumber: string,
+  total: number,
+  paidAt: Date,
+) {
+  await sendEmail(email, `Payment received for order #${orderNumber}`, basewrap('Payment Received', `
+    <p style="font-size: 15px;">Hi ${restaurantName || 'there'},</p>
+    <p style="font-size: 15px;">Great news! We have received your payment for order <strong>#${orderNumber}</strong>.</p>
+    <div style="background: #f9fafb; padding: 16px; border-radius: 6px; margin: 16px 0;">
+      <p style="margin: 0;"><strong>Order:</strong> #${orderNumber}</p>
+      <p style="margin: 4px 0 0 0;"><strong>Amount Paid:</strong> $${total.toFixed(2)}</p>
+      <p style="margin: 4px 0 0 0;"><strong>Paid On:</strong> ${paidAt.toLocaleDateString()}</p>
+    </div>
+    <p style="color: #666; font-size: 14px;">Thank you for your business! Please reach out if you have any questions.</p>
+  `))
+}
+
 export async function sendDeliveryReceipt(
   email: string,
   orderNumber: string,

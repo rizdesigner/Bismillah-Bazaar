@@ -2,7 +2,7 @@ export const runtime = 'edge';
 
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
-import { sendDeliveryReceipt, sendOrderConfirmedEmail, sendOrderModifiedEmail } from "@/lib/email";
+import { sendDeliveryReceipt, sendOrderConfirmedEmail, sendOrderModifiedEmail, sendOrderPaidEmail } from "@/lib/email";
 
 export async function PATCH(
   req: NextRequest,
@@ -109,6 +109,26 @@ export async function PATCH(
       message: messageParts.join("\n"),
     });
 
+    if (status === "delivered") {
+      await supabase.from('notifications').insert({
+        user_id: order.user_id,
+        order_id: id,
+        type: "order_delivered",
+        title: "Order Delivered",
+        message: `Your order #${updatedOrder.order_number} has been delivered. Thank you for your business!`,
+      });
+    }
+
+    if (paymentStatus === "paid") {
+      await supabase.from('notifications').insert({
+        user_id: order.user_id,
+        order_id: id,
+        type: "order_paid",
+        title: "Payment Received",
+        message: `Payment received for order #${updatedOrder.order_number}. Thank you!`,
+      });
+    }
+
     const customerEmail = order.user?.email;
     const restaurantName = order.user?.restaurant_name || '';
 
@@ -118,6 +138,16 @@ export async function PATCH(
 
     if (changes.length > 0 && customerEmail && !(status === "confirmed" && status !== order.status)) {
       await sendOrderModifiedEmail(customerEmail, restaurantName, updatedOrder.order_number, changes, Number(updateData.final_total ?? updatedOrder.final_total ?? updatedOrder.original_total));
+    }
+
+    if (paymentStatus === "paid" && customerEmail) {
+      await sendOrderPaidEmail(
+        customerEmail,
+        restaurantName,
+        updatedOrder.order_number,
+        Number(updatedOrder.final_total ?? updatedOrder.original_total),
+        new Date(),
+      );
     }
 
     if (status === "delivered" && customerEmail) {

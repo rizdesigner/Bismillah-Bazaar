@@ -67,9 +67,9 @@ export async function PATCH(
     }
 
     if (status === "active") {
-      sendAccountApprovedEmail(customer.email, customer.restaurant_name);
+      await sendAccountApprovedEmail(customer.email, customer.restaurant_name);
     } else if (status === "suspended") {
-      sendAccountRejectedEmail(customer.email, customer.restaurant_name);
+      await sendAccountRejectedEmail(customer.email, customer.restaurant_name);
     }
 
     return NextResponse.json(customer);

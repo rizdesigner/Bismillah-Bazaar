@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSession } from "./session-provider";
 import { useState, useEffect, useRef } from "react";
+import { NotificationSoundToggle } from "./notification-sound-toggle";
 
 type Notification = {
   id: string;
@@ -97,6 +98,7 @@ export function AdminHeader() {
         </Link>
 
         <div className="flex items-center gap-3">
+          <NotificationSoundToggle />
           <div className="relative">
             <button
               onClick={() => setShowDropdown(!showDropdown)}

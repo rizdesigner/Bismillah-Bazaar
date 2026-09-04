@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { NotificationBell } from "./notification-bell";
 import { InstallButton } from "./install-button";
+import { NotificationSoundToggle } from "./notification-sound-toggle";
 
 export function AppHeader() {
   const { profile } = useSession();
@@ -52,6 +53,7 @@ export function AppHeader() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <InstallButton />
+          <NotificationSoundToggle />
           <NotificationBell />
 
           <div className="relative" ref={menuRef}>
