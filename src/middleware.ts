@@ -14,8 +14,9 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - manifest.webmanifest (web manifest)
+     * - sw.js / swe-worker.js (service workers)
      * - public files (svg, png, jpg, jpeg, gif, webp)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw\\.js|swe-worker\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
