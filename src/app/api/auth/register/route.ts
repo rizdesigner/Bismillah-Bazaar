@@ -62,7 +62,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (err) {
+    console.error('[REGISTER] Unexpected error:', err)
     return NextResponse.json(
       { error: 'Registration failed' },
       { status: 500 }
