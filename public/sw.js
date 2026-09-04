@@ -1,5 +1,5 @@
 /* Bismillah Bazaar Service Worker */
-const CACHE_NAME = 'bismillah-bazaar-v1';
+const CACHE_NAME = 'bismillah-bazaar-v2';
 const STATIC_ASSETS = ['/', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

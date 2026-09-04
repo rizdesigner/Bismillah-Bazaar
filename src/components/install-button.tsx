@@ -16,8 +16,11 @@ function isAppInstalled(): boolean {
   if (typeof window === "undefined") return false;
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
   const isIOSStandalone = (window.navigator as any).standalone === true;
-  const wasInstalled = localStorage.getItem("bb_app_installed") === "true";
-  return isStandalone || isIOSStandalone || wasInstalled;
+  // Only treat as installed when actually running as an installed PWA.
+  // Relying on localStorage alone can hide the button incorrectly.
+  const wasInstalled =
+    localStorage.getItem("bb_app_installed") === "true" && isStandalone;
+  return isStandalone || isIOSStandalone;
 }
 
 export function InstallButton() {
