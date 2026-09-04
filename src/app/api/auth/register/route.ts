@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       adminEmails.push(ADMIN_ALERT_EMAIL);
     }
     if (adminEmails.length > 0) {
-      sendNewRegistrationEmail(adminEmails, restaurantName, email, phone || null, location || null);
+      await sendNewRegistrationEmail(adminEmails, restaurantName, email, phone || null, location || null);
     }
 
     return NextResponse.json({ success: true });

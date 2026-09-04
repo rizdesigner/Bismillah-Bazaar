@@ -159,8 +159,10 @@ export async function POST(req: NextRequest) {
       return { name: inv?.item_name || item.itemId, quantity: item.requestedLb };
     });
 
-    sendOrderPlacedEmail(user.email!, customerProfile?.restaurant_name || '', orderNumber, itemDetails, originalTotal);
-    sendNewOrderAlertEmail([ADMIN_ALERT_EMAIL], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, originalTotal);
+    await Promise.allSettled([
+      sendOrderPlacedEmail(user.email!, customerProfile?.restaurant_name || '', orderNumber, itemDetails, originalTotal),
+      sendNewOrderAlertEmail([ADMIN_ALERT_EMAIL], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, originalTotal),
+    ]);
 
     return NextResponse.json({ orderId: order.id });
   } catch (error) {

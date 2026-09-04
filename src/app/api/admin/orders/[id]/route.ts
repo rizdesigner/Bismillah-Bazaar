@@ -113,11 +113,11 @@ export async function PATCH(
     const restaurantName = order.user?.restaurant_name || '';
 
     if (status && status !== order.status && status === "confirmed" && customerEmail) {
-      sendOrderConfirmedEmail(customerEmail, restaurantName, updatedOrder.order_number, Number(updateData.final_total ?? updatedOrder.final_total ?? updatedOrder.original_total));
+      await sendOrderConfirmedEmail(customerEmail, restaurantName, updatedOrder.order_number, Number(updateData.final_total ?? updatedOrder.final_total ?? updatedOrder.original_total));
     }
 
     if (changes.length > 0 && customerEmail && !(status === "confirmed" && status !== order.status)) {
-      sendOrderModifiedEmail(customerEmail, restaurantName, updatedOrder.order_number, changes, Number(updateData.final_total ?? updatedOrder.final_total ?? updatedOrder.original_total));
+      await sendOrderModifiedEmail(customerEmail, restaurantName, updatedOrder.order_number, changes, Number(updateData.final_total ?? updatedOrder.final_total ?? updatedOrder.original_total));
     }
 
     if (status === "delivered" && customerEmail) {
