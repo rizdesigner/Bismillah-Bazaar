@@ -118,7 +118,7 @@ export function ClientPricingManager({
 
     try {
       for (const change of entries) {
-        await fetch("/api/admin/client-overrides", {
+        const res = await fetch("/api/admin/client-overrides", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -128,6 +128,10 @@ export function ClientPricingManager({
             isAvailable: change.isAvailable,
           }),
         });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `Failed to save ${change.itemId}`);
+        }
       }
 
       setPendingChanges({});
@@ -135,7 +139,7 @@ export function ClientPricingManager({
       await fetchOverrides(selectedCustomerId);
     } catch (error) {
       console.error("Failed to save overrides:", error);
-      setStatusMsg("Failed to save changes");
+      setStatusMsg("Failed to save changes. Nothing was saved — please try again.");
     } finally {
       setSaving(false);
     }
