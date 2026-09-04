@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { InstallButton } from "@/components/install-button";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -45,6 +46,9 @@ export default function RegisterPage() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-8">
+      <div className="mb-8 flex justify-end">
+        <InstallButton />
+      </div>
       <div className="mb-8 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 text-2xl font-bold text-white">
           B

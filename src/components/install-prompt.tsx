@@ -51,19 +51,37 @@ export function InstallPrompt() {
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     window.addEventListener("appinstalled", onAppInstalled);
 
+    // iOS doesn't fire beforeinstallprompt, so show the prompt manually
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+    const iosStandalone = (window.navigator as any).standalone === true;
+    if (isIOS && !isStandalone && !iosStandalone && !wasDismissed) {
+      setTimeout(() => setVisible(true), 2000);
+    }
+
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
       window.removeEventListener("appinstalled", onAppInstalled);
     };
   }, []);
 
-  if (!deferredPrompt || dismissed || !visible) return null;
+  if (dismissed || !visible) return null;
+
+  const isIOS = typeof window !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent);
 
   const handleInstall = async () => {
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+    }
     setDeferredPrompt(null);
     setVisible(false);
+    localStorage.setItem(INSTALLED_KEY, "true");
+    // On iOS there's no programmatic install — navigate to a page that
+    // shows the "(App)" InstallButton modal with the Share -> Add steps.
+    if (isIOS) {
+      window.location.href = "/login";
+    }
   };
 
   const handleDismiss = () => {

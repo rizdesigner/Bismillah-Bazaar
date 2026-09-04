@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase-client";
 import Link from "next/link";
+import { InstallButton } from "@/components/install-button";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -56,6 +57,9 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-4 sm:px-6">
+      <div className="mb-6 flex justify-end">
+        <InstallButton />
+      </div>
       <div className="mb-6 text-center sm:mb-8">
         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-xl font-bold text-white sm:mb-4 sm:h-16 sm:w-16 sm:text-2xl">
           B
