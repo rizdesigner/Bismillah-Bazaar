@@ -36,12 +36,19 @@ export async function GET(req: NextRequest) {
     );
 
     const serialized = sorted.map((o: any) => ({
-      ...o,
+      id: o.id,
+      userId: o.user_id,
+      itemId: o.item_id,
       customPriceKg: o.custom_price_kg ? Number(o.custom_price_kg) : null,
-      item: {
-        ...o.item,
-        basePriceKg: Number(o.item.base_price_kg),
-      },
+      isAvailable: o.is_available,
+      item: o.item
+        ? {
+            id: o.item.id,
+            itemName: o.item.item_name,
+            category: o.item.category,
+            basePriceKg: Number(o.item.base_price_kg),
+          }
+        : null,
     }));
 
     return NextResponse.json(serialized);
@@ -105,12 +112,19 @@ export async function POST(req: NextRequest) {
     }
 
     const serialized = {
-      ...result,
+      id: result?.id,
+      userId: result?.user_id,
+      itemId: result?.item_id,
       customPriceKg: result?.custom_price_kg ? Number(result.custom_price_kg) : null,
-      item: result?.item ? {
-        ...result.item,
-        basePriceKg: Number(result.item.base_price_kg),
-      } : null,
+      isAvailable: result?.is_available,
+      item: result?.item
+        ? {
+            id: result.item.id,
+            itemName: result.item.item_name,
+            category: result.item.category,
+            basePriceKg: Number(result.item.base_price_kg),
+          }
+        : null,
     };
 
     return NextResponse.json(serialized);
