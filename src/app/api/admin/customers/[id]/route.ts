@@ -3,6 +3,7 @@ export const runtime = 'edge';
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
 import { sendAccountApprovedEmail, sendAccountRejectedEmail } from "@/lib/email";
+import { notifyUser } from "@/lib/notify";
 
 export async function PATCH(
   req: NextRequest,
@@ -57,9 +58,9 @@ export async function PATCH(
 
     const notification = statusMessages[status];
     if (notification) {
-      await supabase.from('notifications').insert({
-        user_id: id,
-        order_id: null,
+      await notifyUser(supabase, {
+        userId: id,
+        orderId: null,
         type: "account_update",
         title: notification.title,
         message: notification.message,

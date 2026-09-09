@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
+import { notifyUser } from "@/lib/notify";
 
 export async function POST(
   req: NextRequest,
@@ -52,15 +53,13 @@ export async function POST(
       .update({ status: "confirmed" })
       .eq('id', id);
 
-    await supabase
-      .from('notifications')
-      .insert({
-        user_id: order.user_id,
-        order_id: id,
-        type: "order_confirmed",
-        title: "Order Confirmed",
-        message: `Your order has been confirmed and will be delivered as scheduled.`,
-      });
+    await notifyUser(supabase, {
+      userId: order.user_id,
+      orderId: id,
+      type: "order_confirmed",
+      title: "Order Confirmed",
+      message: `Your order has been confirmed and will be delivered as scheduled.`,
+    });
 
     const { data: admin } = await supabase
       .from('users')
@@ -70,15 +69,13 @@ export async function POST(
       .single();
 
     if (admin) {
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: admin.id,
-          order_id: id,
-          type: "order_confirmed",
-          title: "Order Confirmed by Customer",
-          message: `${order.user.restaurant_name || order.user.email} has confirmed order #${id.slice(0, 8)}.`,
-        });
+      await notifyUser(supabase, {
+        userId: admin.id,
+        orderId: id,
+        type: "order_confirmed",
+        title: "Order Confirmed by Customer",
+        message: `${order.user.restaurant_name || order.user.email} has confirmed order #${id.slice(0, 8)}.`,
+      });
     }
 
     return NextResponse.json({ success: true });

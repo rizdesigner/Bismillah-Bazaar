@@ -3,6 +3,7 @@ export const runtime = 'edge';
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
 import { sendDeliveryReceipt, sendOrderConfirmedEmail, sendOrderModifiedEmail, sendOrderPaidEmail } from "@/lib/email";
+import { notifyUser } from "@/lib/notify";
 
 export async function PATCH(
   req: NextRequest,
@@ -107,18 +108,18 @@ export async function PATCH(
       messageParts.push("Changes:", ...changes.map((c) => `• ${c}`));
     }
 
-    await supabase.from('notifications').insert({
-      user_id: order.user_id,
-      order_id: id,
+    await notifyUser(supabase, {
+      userId: order.user_id,
+      orderId: id,
       type: "order_modified",
       title: "Order Updated",
       message: messageParts.join("\n"),
     });
 
     if (status === "delivered") {
-      await supabase.from('notifications').insert({
-        user_id: order.user_id,
-        order_id: id,
+      await notifyUser(supabase, {
+        userId: order.user_id,
+        orderId: id,
         type: "order_delivered",
         title: "Order Delivered",
         message: `Your order #${updatedOrder.order_number} has been delivered. Thank you for your business!`,
@@ -126,9 +127,9 @@ export async function PATCH(
     }
 
     if (paymentStatus === "paid") {
-      await supabase.from('notifications').insert({
-        user_id: order.user_id,
-        order_id: id,
+      await notifyUser(supabase, {
+        userId: order.user_id,
+        orderId: id,
         type: "order_paid",
         title: "Payment Received",
         message: `Payment received for order #${updatedOrder.order_number}. Thank you!`,

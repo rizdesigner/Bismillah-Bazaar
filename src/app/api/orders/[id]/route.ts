@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
+import { notifyUser } from "@/lib/notify";
 
 export async function PATCH(
   req: NextRequest,
@@ -152,15 +153,13 @@ export async function PATCH(
       .eq('role', 'admin');
 
     for (const admin of (admins || [])) {
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: admin.id,
-          order_id: id,
-          type: "order_edited",
-          title: "Order Edited by Restaurant",
-          message: `${order.user.restaurant_name || order.user.email} updated order #${id.slice(0, 8)}. Please re-review the requested quantities.`,
-        });
+      await notifyUser(supabase, {
+        userId: admin.id,
+        orderId: id,
+        type: "order_edited",
+        title: "Order Edited by Restaurant",
+        message: `${order.user.restaurant_name || order.user.email} updated order #${id.slice(0, 8)}. Please re-review the requested quantities.`,
+      });
     }
 
     return NextResponse.json({ success: true });

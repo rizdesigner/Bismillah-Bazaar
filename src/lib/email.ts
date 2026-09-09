@@ -1,5 +1,5 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
-const FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev'
+const FROM = process.env.EMAIL_FROM || 'Bismillah Bazaar <no-reply@mail.bismillahbazarlondon.ca>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bismillah-bazaar-production.up.railway.app'
 
 async function sendEmail(to: string | string[], subject: string, html: string) {

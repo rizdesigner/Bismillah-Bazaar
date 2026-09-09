@@ -3,6 +3,7 @@ export const runtime = 'edge';
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
 import { sendNewRegistrationEmail } from '@/lib/email';
+import { notifyUser } from '@/lib/notify';
 
 const ADMIN_ALERT_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'bismillah.grocery.mart.2022@gmail.com';
 
@@ -63,8 +64,8 @@ export async function POST(req: Request) {
 
     // Create an in-app notification for every admin
     for (const adminId of adminIds) {
-      await supabase.from('notifications').insert({
-        user_id: adminId,
+      await notifyUser(supabase, {
+        userId: adminId,
         type: 'new_registration',
         title: 'New Restaurant Registration',
         message: `${restaurantName} (${email}) has registered and is awaiting approval.`,

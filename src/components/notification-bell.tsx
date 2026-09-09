@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "./session-provider";
+import { createClient } from "@/lib/supabase-client";
 
 type Notification = {
   id: string;
@@ -44,12 +45,32 @@ export function NotificationBell() {
   useEffect(() => {
     if (profile?.id) {
       fetchNotifications();
-      
+
+      // Real-time push: server broadcasts to notif:<userId> on every action.
+      const supabase = createClient();
+      const realtimeChannel = supabase.channel(`notif:${profile.id}`);
+      realtimeChannel
+        .on("broadcast", { event: "notification" }, (payload) => {
+          const n = payload.payload as Notification;
+          setNotifications((prev) => [
+            n,
+            ...prev.filter((x) => x.id !== n.id),
+          ]);
+        })
+        .subscribe();
+
       intervalRef.current = setInterval(() => {
         fetchNotifications();
-      }, 5000);
+      }, 30000);
+
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+        supabase.removeChannel(realtimeChannel);
+      };
     }
-    
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -108,7 +129,7 @@ export function NotificationBell() {
         </svg>
         {unreadCount > 0 && (
           <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-            {unreadCount}
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>

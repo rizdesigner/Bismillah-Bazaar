@@ -5,15 +5,28 @@ import { onToast, type ToastMessage } from "@/lib/toast-events";
 
 export function ToastContainer() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [leaving, setLeaving] = useState<Record<string, boolean>>({});
+
+  const dismissToast = (id: string) => {
+    if (leaving[id]) return;
+    setLeaving((prev) => ({ ...prev, [id]: true }));
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+      setLeaving((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }, 300);
+  };
 
   useEffect(() => {
     const unsub = onToast((toast) => {
       setToasts((prev) => [...prev, toast]);
-      setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== toast.id));
-      }, 5000);
+      setTimeout(() => dismissToast(toast.id), 5000);
     });
     return unsub;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (toasts.length === 0) return null;
@@ -23,7 +36,11 @@ export function ToastContainer() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`w-72 rounded-lg border p-3 shadow-lg animate-in slide-in-from-right fade-in duration-300 sm:w-80 ${
+          className={`w-72 rounded-lg border p-3 shadow-lg duration-300 sm:w-80 ${
+            leaving[toast.id]
+              ? "animate-out fade-out"
+              : "animate-in slide-in-from-right fade-in"
+          } ${
             toast.type === "success"
               ? "border-emerald-200 bg-emerald-50"
               : toast.type === "warning"
@@ -57,9 +74,7 @@ export function ToastContainer() {
               </p>
             </div>
             <button
-              onClick={() =>
-                setToasts((prev) => prev.filter((t) => t.id !== toast.id))
-              }
+              onClick={() => dismissToast(toast.id)}
               className="ml-2 text-zinc-400 hover:text-zinc-600"
             >
               <svg
