@@ -3,10 +3,12 @@
   "short_name": "Bismillah Bazaar",
   "description": "B2B wholesale halal meat ordering for restaurants.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#059669",
-  "orientation": "portrait",
+  "categories": ["business", "shopping"],
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -25,6 +27,16 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     }
-  ]
+  ],
+  "screenshots": [],
+  "shortcuts": [],
+  "related_applications": [],
+  "prefer_related_applications": false
 }

@@ -1,55 +1,53 @@
-/* Bismillah Bazaar Service Worker */
-const CACHE_NAME = 'bismillah-bazaar-v2';
-const STATIC_ASSETS = ['/', '/manifest.webmanifest'];
+const CACHE_NAME = 'bismillah-bazaar-v1';
+const urlsToCache = [
+  '/',
+  '/catalog',
+  '/orders',
+  '/cart',
+  '/account',
+  '/login',
+  '/manifest.webmanifest',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+  '/icons/apple-touch-icon.png',
+];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(urlsToCache))
+      .catch((err) => console.log('Cache install failed:', err))
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request)
+      .then((response) => {
+        if (response) {
+          return response;
+        }
+        return fetch(event.request);
+      })
+      .catch(() => {
+        if (event.request.destination === 'document') {
+          return caches.match('/');
+        }
+      })
+  );
 });
 
 self.addEventListener('activate', (event) => {
+  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
-
-// Network-first for all navigations (pages are dynamic and auth-protected)
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-
-  // Only handle GET requests
-  if (request.method !== 'GET') return;
-
-  const url = new URL(request.url);
-
-  // Skip non-GET, API calls, and other origins
-  if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/')) return;
-
-  // For page navigations: network-first, fall back to cached offline page
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          return response;
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            return caches.delete(cacheName);
+          }
         })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match('/')))
-    );
-    return;
-  }
-
-  // Static assets: cache-first
-  event.respondWith(
-    caches.match(request).then(
-      (cached) => cached || fetch(request).then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-        return response;
-      })
-    )
+      );
+    })
   );
 });
