@@ -106,13 +106,19 @@ export function NotificationBell() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  if (!profile) return null;
+  if (!profile) {
+    console.log('[NotificationBell] No profile, not rendering');
+    return null;
+  }
+
+  console.log('[NotificationBell] Rendering for profile:', profile.id, 'unread:', unreadCount);
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center gap-1">
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="relative rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border-2 border-red-500"
+        className="relative rounded-lg p-2 text-red-600 hover:bg-red-50 hover:text-red-700 border-2 border-red-500 bg-white shadow-sm"
+        title="Notifications"
       >
         <svg
           className="h-6 w-6"
@@ -128,11 +134,12 @@ export function NotificationBell() {
           />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
+      <span className="text-xs font-medium text-red-600 hidden sm:inline">Notifications</span>
 
       {showDropdown && (
         <div className="absolute right-0 mt-2 w-72 rounded-lg border border-zinc-200 bg-white shadow-lg sm:w-96">

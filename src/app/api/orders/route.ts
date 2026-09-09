@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-server';
 import { NextResponse, NextRequest } from "next/server";
 import { generateOrderNumber } from "@/lib/order-number";
 import { sendOrderPlacedEmail, sendNewOrderAlertEmail } from "@/lib/email";
+import { notifyUser } from "@/lib/notify";
 
 const ADMIN_ALERT_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'bismillah.grocery.mart.2022@gmail.com';
 
@@ -163,6 +164,24 @@ export async function POST(req: NextRequest) {
       sendOrderPlacedEmail(user.email!, customerProfile?.restaurant_name || '', orderNumber, itemDetails, originalTotal),
       sendNewOrderAlertEmail([ADMIN_ALERT_EMAIL], customerProfile?.restaurant_name || '', orderNumber, validatedItems.length, originalTotal),
     ]);
+
+    // Notify all admins about the new order
+    const { data: admins } = await supabase
+      .from('users')
+      .select('id')
+      .eq('role', 'admin');
+
+    if (admins && admins.length > 0) {
+      for (const admin of admins) {
+        await notifyUser(supabase, {
+          userId: admin.id,
+          orderId: order.id,
+          type: 'new_order',
+          title: 'New Order Received',
+          message: `${customerProfile?.restaurant_name || 'A restaurant'} placed order #${orderNumber} ($${originalTotal.toFixed(2)})`,
+        });
+      }
+    }
 
     return NextResponse.json({ orderId: order.id });
   } catch (error) {
