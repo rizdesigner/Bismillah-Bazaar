@@ -34,11 +34,8 @@ export function AppHeader() {
     window.location.href = redirectUrl;
   };
 
-  return (
+return (
     <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <div className="bg-red-600 text-white text-center py-2 font-bold text-lg">
-         LATEST CODE DEPLOYED - BELL SHOULD BE HERE 🔔
-      </div>
       <div className="mx-auto flex w-full items-center justify-between px-4 py-2.5 sm:py-3">
         <Link href="/" className="flex items-center gap-2 sm:gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-base font-bold text-white sm:h-9 sm:w-9 sm:text-lg">
