@@ -81,7 +81,6 @@ export async function PATCH(
     if (status) updateData.status = status;
     if (paymentStatus) updateData.payment_status = paymentStatus;
     if (paymentMethod) updateData.payment_method = paymentMethod;
-    if (paymentStatus === "paid") updateData.paid_at = new Date().toISOString();
     if (status === "delivered") {
       updateData.delivered_at = order.delivered_at ?? new Date().toISOString();
     } else if (status && status !== "delivered") {
@@ -94,6 +93,13 @@ export async function PATCH(
       .eq('id', id)
       .select('*, items:order_items(*, item:inventory(*)), user:users(*)')
       .single();
+
+    if (!updatedOrder) {
+      return NextResponse.json(
+        { error: "Failed to update order" },
+        { status: 500 }
+      );
+    }
 
     const messageParts = ["Your order has been updated by the admin."];
 
