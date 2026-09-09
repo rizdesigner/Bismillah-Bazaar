@@ -106,15 +106,20 @@ export function NotificationBell() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  console.log('[NotificationBell] Component loaded, profile:', profile);
+
   if (!profile) {
-    console.log('[NotificationBell] No profile, not rendering');
-    return null;
+    return (
+      <div className="bg-yellow-400 text-black px-3 py-1 text-sm font-bold border-2 border-black">
+        BELL: NO PROFILE
+      </div>
+    );
   }
 
   console.log('[NotificationBell] Rendering for profile:', profile.id, 'unread:', unreadCount);
 
   return (
-    <div className="relative flex items-center gap-1">
+    <div className="relative flex items-center gap-1 bg-yellow-200 px-2 py-1 border-2 border-red-500">
       <button
         onClick={() => setShowDropdown(!showDropdown)}
         className="relative rounded-lg p-2 text-red-600 hover:bg-red-50 hover:text-red-700 border-2 border-red-500 bg-white shadow-sm"
@@ -139,7 +144,7 @@ export function NotificationBell() {
           </span>
         )}
       </button>
-      <span className="text-xs font-medium text-red-600 hidden sm:inline">Notifications</span>
+      <span className="text-xs font-bold text-red-600">BELL</span>
 
       {showDropdown && (
         <div className="absolute right-0 mt-2 w-72 rounded-lg border border-zinc-200 bg-white shadow-lg sm:w-96">
