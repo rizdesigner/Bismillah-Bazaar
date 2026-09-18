@@ -25,28 +25,15 @@ export default function LoginPage() {
 
       if (authError) {
         setError("Invalid email or password");
-      } else if (data.user) {
-        console.log('Login successful, user:', data.user.email);
-        const { data: profile, error: profileError } = await supabase
-          .from("users")
-          .select("role, status")
-          .eq("id", data.user.id)
-          .single();
+        return;
+      }
 
-        console.log('Profile query result:', profile, 'Error:', profileError);
-
-        if (profileError || !profile) {
-          setError("Account not found. Please contact support.");
-          return;
-        }
-
-        if (profile.role === "admin") {
-          window.location.href = "/admin";
-        } else if (profile.status === "active") {
-          window.location.href = "/catalog";
-        } else {
-          window.location.href = "/register/pending";
-        }
+      if (data.user) {
+        // Session is persisted by supabase-ssr. Navigate to "/" so the
+        // server-side root page can safely resolve the role/status and
+        // redirect to the correct dashboard. No client-side users-table
+        // query is needed for navigation, so we never block on it.
+        window.location.assign("/");
       }
     } catch {
       setError("An error occurred. Please try again.");

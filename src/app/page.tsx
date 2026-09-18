@@ -13,7 +13,7 @@ export default async function Home() {
   if (user) {
     const { data: profile } = await supabase
       .from("users")
-      .select("role")
+      .select("role, status")
       .eq("id", user.id)
       .single();
 
@@ -22,7 +22,7 @@ export default async function Home() {
     }
 
     if (profile?.role === "customer") {
-      redirect("/catalog");
+      redirect(profile.status === "active" ? "/catalog" : "/register/pending");
     }
   }
 
