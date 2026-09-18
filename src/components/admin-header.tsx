@@ -19,7 +19,20 @@ export function AdminHeader() {
   const { profile } = useSession();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const lastIdsRef = useRef<Set<string>>(new Set());
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [showMenu]);
 
   const fetchNotifications = async () => {
     if (!profile?.id) return;
@@ -179,29 +192,95 @@ export function AdminHeader() {
             )}
           </div>
 
-          <nav className="flex items-center gap-2 text-xs sm:gap-4 sm:text-sm">
-            <span className="text-zinc-600">
-              {profile?.email}
-            </span>
-            <Link
-              href="/admin/settings"
-              className="text-zinc-600 hover:text-emerald-600"
-            >
-              Settings
-            </Link>
+          <div className="relative" ref={menuRef}>
             <button
-              onClick={handleSignOut}
-              className="text-zinc-600 hover:text-emerald-600"
+              onClick={() => setShowMenu((v) => !v)}
+              aria-label="Account menu"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-500 sm:h-10 sm:w-10"
             >
-              Logout
+              {profile?.email?.charAt(0)?.toUpperCase() || "A"}
             </button>
-            <Link
-              href="/"
-              className="text-zinc-600 hover:text-emerald-600"
-            >
-              View Site
-            </Link>
-          </nav>
+
+            {showMenu && (
+              <div className="absolute right-0 mt-2 w-60 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg">
+                <div className="border-b border-zinc-100 px-3.5 py-3">
+                  <p className="truncate text-sm font-semibold text-zinc-900">
+                    Admin Panel
+                  </p>
+                  {profile?.email && (
+                    <p className="mt-0.5 truncate text-xs text-zinc-500">
+                      {profile.email}
+                    </p>
+                  )}
+                </div>
+
+                <nav className="p-1.5">
+                  <Link
+                    href="/admin/settings"
+                    onClick={() => setShowMenu(false)}
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+                  >
+                    <svg
+                      className="h-4 w-4 text-zinc-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                    Settings
+                  </Link>
+
+                  <Link
+                    href="/"
+                    onClick={() => setShowMenu(false)}
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+                  >
+                    <svg
+                      className="h-4 w-4 text-zinc-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M10 17l5-5-5-5" />
+                      <path d="M15 12H3" />
+                      <path d="M21 21V3" />
+                    </svg>
+                    View Site
+                  </Link>
+
+                  <button
+                    onClick={handleSignOut}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                  >
+                    <svg
+                      className="h-4 w-4 text-zinc-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                      <path d="M16 17l5-5-5-5" />
+                      <path d="M21 12H9" />
+                    </svg>
+                    Logout
+                  </button>
+                </nav>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
