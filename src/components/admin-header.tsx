@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSession } from "./session-provider";
 import { useState, useEffect, useRef } from "react";
+import { createClient } from "@/lib/supabase-client";
 import { NotificationSoundToggle } from "./notification-sound-toggle";
 
 type Notification = {
@@ -63,7 +64,42 @@ export function AdminHeader() {
     if (profile?.id) {
       fetchNotifications();
       const interval = setInterval(fetchNotifications, 3000);
-      return () => clearInterval(interval);
+
+      const supabase = createClient();
+      const realtimeChannel = supabase
+        .channel(`notifications-insert-admin-${profile.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${profile.id}`,
+          },
+          (payload) => {
+            const row = payload.new as any;
+            if (!row?.id) return;
+            const n: Notification = {
+              id: row.id,
+              type: row.type ?? "",
+              title: row.title ?? "",
+              message: row.message ?? "",
+              read: false,
+              createdAt: row.created_at,
+              orderId: row.order_id ?? "",
+            };
+            setNotifications((prev) => [
+              n,
+              ...prev.filter((x) => x.id !== n.id),
+            ]);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        clearInterval(interval);
+        supabase.removeChannel(realtimeChannel);
+      };
     }
   }, [profile?.id]);
 
@@ -74,12 +110,17 @@ export function AdminHeader() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-      );
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
     }
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+  };
+
+  const dismiss = async (id: string) => {
+    await markAsRead(id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   const handleSignOut = async () => {
@@ -159,7 +200,10 @@ export function AdminHeader() {
                     notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`border-b border-zinc-100 px-3 py-2 sm:px-4 sm:py-3 ${
+                        onClick={() => {
+                          if (!notification.read) markAsRead(notification.id);
+                        }}
+                        className={`cursor-pointer border-b border-zinc-100 px-3 py-2 sm:px-4 sm:py-3 ${
                           !notification.read ? "bg-blue-50" : ""
                         }`}
                       >
@@ -177,10 +221,17 @@ export function AdminHeader() {
                           </div>
                           {!notification.read && (
                             <button
-                              onClick={() => markAsRead(notification.id)}
-                              className="ml-1.5 text-[9px] text-emerald-600 hover:text-emerald-500 sm:ml-2 sm:text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                dismiss(notification.id);
+                              }}
+                              aria-label="Dismiss notification"
+                              title="Dismiss"
+                              className="ml-1.5 rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 sm:ml-2"
                             >
-                              Mark read
+                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                                <path d="M6 6l12 12M18 6L6 18" />
+                              </svg>
                             </button>
                           )}
                         </div>

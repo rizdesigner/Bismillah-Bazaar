@@ -9,6 +9,17 @@ export function ToastContainer() {
 
   const dismissToast = (id: string) => {
     if (leaving[id]) return;
+
+    // Mark the underlying notification as read when the toast is dismissed.
+    const toast = toasts.find((t) => t.id === id);
+    if (toast?.notificationId) {
+      fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: toast.notificationId }),
+      }).catch(() => {});
+    }
+
     setLeaving((prev) => ({ ...prev, [id]: true }));
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));

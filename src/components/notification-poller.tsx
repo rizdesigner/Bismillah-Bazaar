@@ -20,7 +20,19 @@ function toastFor(n: Notification) {
     message:
       n.message.length > 100 ? n.message.slice(0, 100) + "..." : n.message,
     type: n.type === "order_modified" ? "warning" : "success",
+    notificationId: n.id,
   });
+}
+
+function mapInsert(payload: { new: any }) {
+  const row = payload.new;
+  return {
+    id: row.id,
+    type: row.type,
+    title: row.title,
+    message: row.message,
+    read: row.read ?? false,
+  };
 }
 
 export function NotificationPoller() {
@@ -39,39 +51,39 @@ export function NotificationPoller() {
       toastFor(n);
     };
 
-    // Real-time push: server broadcasts to notif:<userId> on every action.
-    const realtimeChannel = supabase.channel(`notif:${profile.id}`);
+    // Toasts should only fire for NEW real-time INSERT events pushed while
+    // this page is open. Historical unread notifications are loaded separately
+    // by the bell dropdown and must NOT trigger pop-up toasts.
+    const realtimeChannel = supabase.channel(
+      `notifications-insert-${profile.id}`
+    );
     realtimeChannel
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          handleNew(mapInsert(payload));
+        }
+      )
+      .subscribe();
+
+    // Fallback channel in case the notifications table isn't added to the
+    // realtime publication: the server still broadcasts on notif:<userId>.
+    const fallbackChannel = supabase.channel(`notif:${profile.id}`);
+    fallbackChannel
       .on("broadcast", { event: "notification" }, (payload) => {
         handleNew(payload.payload);
       })
       .subscribe();
 
-    // Fallback so nothing is missed across reconnects / background tabs.
-    const fetchNotifications = async () => {
-      try {
-        const res = await fetch("/api/notifications", {
-          cache: "no-store",
-        });
-
-        if (!res.ok) return;
-
-        const notifications = await res.json();
-        notifications
-          .filter((n: Notification) => !n.read)
-          .forEach(handleNew);
-      } catch (error) {
-        console.error("Notification poll error:", error);
-      }
-    };
-
-    fetchNotifications();
-
-    const interval = setInterval(fetchNotifications, 30000);
-
     return () => {
-      clearInterval(interval);
       supabase.removeChannel(realtimeChannel);
+      supabase.removeChannel(fallbackChannel);
     };
   }, [profile?.id]);
 
