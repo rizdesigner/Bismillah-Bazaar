@@ -69,6 +69,18 @@ export async function PATCH(
 
     if (status === "active") {
       await sendAccountApprovedEmail(customer.email, customer.restaurant_name);
+
+      // Mark the approving admin's "new restaurant registration" notification
+      // as read so the bell badge / dropdown are immediately updated.
+      if (customer.email) {
+        await supabase
+          .from("notifications")
+          .update({ read: true })
+          .eq("user_id", user.id)
+          .eq("type", "new_registration")
+          .eq("read", false)
+          .ilike("message", `%${customer.email}%`);
+      }
     } else if (status === "suspended") {
       await sendAccountRejectedEmail(customer.email, customer.restaurant_name);
     }

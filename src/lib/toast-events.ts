@@ -5,6 +5,7 @@ export type ToastMessage = {
   title: string;
   message: string;
   type: "info" | "success" | "warning";
+  notificationId?: string;
 };
 
 export function emitToast(toast: Omit<ToastMessage, "id">) {
