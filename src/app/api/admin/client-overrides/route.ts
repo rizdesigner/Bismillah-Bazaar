@@ -79,12 +79,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "userId and itemId are required" }, { status: 400 });
     }
 
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('client_product_overrides')
       .select('id')
       .eq('user_id', userId)
       .eq('item_id', itemId)
       .maybeSingle();
+
+    if (existingError) throw existingError;
 
     const payload = {
       user_id: userId,
@@ -95,20 +97,26 @@ export async function POST(req: NextRequest) {
 
     let result;
     if (existing) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('client_product_overrides')
         .update(payload)
         .eq('id', existing.id)
         .select('*, item:inventory(id, item_name, category, base_price_kg, in_stock)')
         .single();
+      if (error) throw error;
       result = data;
     } else {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('client_product_overrides')
         .insert(payload)
         .select('*, item:inventory(id, item_name, category, base_price_kg, in_stock)')
         .single();
+      if (error) throw error;
       result = data;
+    }
+
+    if (!result) {
+      return NextResponse.json({ error: "Failed to save override: no row returned" }, { status: 500 });
     }
 
     const serialized = {
@@ -130,7 +138,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(serialized);
   } catch (error) {
     console.error("Error creating/updating client override:", error);
-    return NextResponse.json({ error: "Failed to save override" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to save override";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
