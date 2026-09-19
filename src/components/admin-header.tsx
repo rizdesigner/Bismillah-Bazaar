@@ -5,6 +5,7 @@ import { useSession } from "./session-provider";
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase-client";
 import { NotificationSoundToggle } from "./notification-sound-toggle";
+import { isTier1 } from "@/lib/notification-tiers";
 
 type Notification = {
   id: string;
@@ -132,6 +133,9 @@ export function AdminHeader() {
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const hasUrgent = notifications.some(
+    (n) => !n.read && isTier1(n.type, profile?.role)
+  );
 
   return (
     <header className="border-b border-zinc-200 bg-white">
@@ -155,7 +159,11 @@ export function AdminHeader() {
           <div className="relative">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="relative rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+              className={`relative rounded-lg p-2 transition-colors ${
+                hasUrgent
+                  ? "bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
+                  : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+              }`}
             >
               <svg
                 className="h-5 w-5 sm:h-6 sm:w-6"

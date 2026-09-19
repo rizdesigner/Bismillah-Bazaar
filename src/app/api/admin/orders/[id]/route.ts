@@ -108,15 +108,25 @@ export async function PATCH(
       messageParts.push("Changes:", ...changes.map((c) => `• ${c}`));
     }
 
-    await notifyUser(supabase, {
-      userId: order.user_id,
-      orderId: id,
-      type: "order_modified",
-      title: "Order Updated",
-      message: messageParts.join("\n"),
-    });
+    if (status !== "cancelled") {
+      await notifyUser(supabase, {
+        userId: order.user_id,
+        orderId: id,
+        type: "order_modified",
+        title: "Order Updated",
+        message: messageParts.join("\n"),
+      });
+    }
 
-    if (status === "delivered") {
+    if (status === "cancelled") {
+      await notifyUser(supabase, {
+        userId: order.user_id,
+        orderId: id,
+        type: "order_cancelled",
+        title: "Order Cancelled",
+        message: `Your order #${updatedOrder.order_number} has been cancelled by the admin.`,
+      });
+    } else if (status === "delivered") {
       await notifyUser(supabase, {
         userId: order.user_id,
         orderId: id,

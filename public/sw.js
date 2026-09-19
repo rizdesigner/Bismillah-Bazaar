@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bismillah-bazaar-v1';
+const CACHE_NAME = 'bismillah-bazaar-v2';
 const urlsToCache = [
   '/',
   '/catalog',
@@ -21,6 +21,20 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Only handle same-origin GET requests. Everything else (API calls,
+  // Supabase Realtime/auth traffic, cross-origin requests) must be passed
+  // through untouched - intercepting those triggers a "redirected response
+  // was used for a request whose redirect mode is not follow" FetchEvent
+  // network error that kills the realtime socket.
+  if (
+    event.request.method !== 'GET' ||
+    url.origin !== self.location.origin
+  ) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

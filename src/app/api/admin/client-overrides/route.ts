@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from '@/lib/supabase-server';
+import { notifyUser } from "@/lib/notify";
 
 export async function GET(req: NextRequest) {
   try {
@@ -134,6 +135,18 @@ export async function POST(req: NextRequest) {
           }
         : null,
     };
+
+    // Tier 2 (status update) for the restaurant whose pricing was customized.
+    await notifyUser(supabase, {
+      userId,
+      orderId: null,
+      type: "pricing_assigned",
+      title: "Custom Pricing Updated",
+      message: `Your custom pricing for ${result.item?.item_name ?? "an item"} has been updated by the admin.`
+        + (customPriceKg !== null && customPriceKg !== undefined
+          ? ` New price: $${Number(customPriceKg).toFixed(2)}/kg.`
+          : ""),
+    });
 
     return NextResponse.json(serialized);
   } catch (error) {

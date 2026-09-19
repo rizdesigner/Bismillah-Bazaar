@@ -23,6 +23,7 @@ enum OrderStatus {
   modified
   confirmed
   delivered
+  cancelled
 }
 
 enum PaymentStatus {

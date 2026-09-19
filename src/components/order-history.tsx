@@ -52,11 +52,13 @@ const statusColors: Record<string, string> = {
   modified: "bg-blue-100 text-blue-700",
   confirmed: "bg-emerald-100 text-emerald-700",
   delivered: "bg-zinc-100 text-zinc-700",
+  cancelled: "bg-red-100 text-red-700",
 };
 
 export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory: InventoryItem[] }) {
   const [activeTab, setActiveTab] = useState<"active" | "delivered">("active");
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editItems, setEditItems] = useState<EditItem[]>([]);
   const [newItemId, setNewItemId] = useState("");
@@ -87,7 +89,33 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
     }
   };
 
+  const handleCancel = async (orderId: string) => {
+    if (!confirm("Cancel this order? This cannot be undone.")) return;
+    setCancellingId(orderId);
+
+    try {
+      const res = await fetch(`/api/orders/${orderId}/cancel`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to cancel order");
+        return;
+      }
+
+      window.location.reload();
+    } catch {
+      alert("An error occurred");
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   const canEdit = (status: string) => status === "pending" || status === "confirmed";
+
+  const canCancel = (status: string) =>
+    status === "pending" || status === "modified" || status === "confirmed";
 
   const openEdit = (order: Order) => {
     setEditingOrder(order);
@@ -235,6 +263,15 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                       className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
                     >
                       {acceptingId === order.id ? "Accepting..." : "Accept Order"}
+                    </button>
+                  )}
+                  {canCancel(order.status) && (
+                    <button
+                      onClick={() => handleCancel(order.id)}
+                      disabled={cancellingId === order.id}
+                      className="rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {cancellingId === order.id ? "Cancelling..." : "Cancel Order"}
                     </button>
                   )}
                 </div>
