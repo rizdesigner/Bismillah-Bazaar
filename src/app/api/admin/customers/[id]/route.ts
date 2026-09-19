@@ -41,16 +41,19 @@ export async function PATCH(
 
     if (error) throw error;
 
-    const statusMessages: Record<string, { title: string; message: string }> = {
+    const statusMessages: Record<string, { type: string; title: string; message: string }> = {
       active: {
+        type: "account_approved",
         title: "Account Approved!",
         message: `Your account has been approved. You can now browse the catalog and place orders.`,
       },
       suspended: {
+        type: "account_update",
         title: "Account Suspended",
         message: `Your account has been suspended. Please contact support for more information.`,
       },
       pending_approval: {
+        type: "account_update",
         title: "Account Status Updated",
         message: `Your account status has been changed to pending approval.`,
       },
@@ -61,7 +64,7 @@ export async function PATCH(
       await notifyUser(supabase, {
         userId: id,
         orderId: null,
-        type: "account_update",
+        type: notification.type,
         title: notification.title,
         message: notification.message,
       });

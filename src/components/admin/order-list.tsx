@@ -36,6 +36,7 @@ const statusColors: Record<string, string> = {
   modified: "bg-blue-100 text-blue-700",
   confirmed: "bg-emerald-100 text-emerald-700",
   delivered: "bg-zinc-100 text-zinc-700",
+  cancelled: "bg-red-100 text-red-700",
 };
 
 export function OrderList({ orders }: { orders: Order[] }) {
@@ -44,7 +45,7 @@ export function OrderList({ orders }: { orders: Order[] }) {
 
   const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
 
-  const statuses = ["all", "pending", "modified", "confirmed", "delivered"];
+  const statuses = ["all", "pending", "modified", "confirmed", "delivered", "cancelled"];
 
   return (
     <div className="mt-6">

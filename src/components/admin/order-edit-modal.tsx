@@ -195,6 +195,7 @@ export function OrderEditModal({
                 <option value="modified">Modified</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
               </select>
             </div>
           </div>

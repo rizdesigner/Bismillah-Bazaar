@@ -5,6 +5,7 @@ import { useSession } from "./session-provider";
 import { emitToast } from "@/lib/toast-events";
 import { playNotificationSound } from "@/lib/sound";
 import { createClient } from "@/lib/supabase-client";
+import { isTier1 } from "@/lib/notification-tiers";
 
 type Notification = {
   id: string;
@@ -15,11 +16,12 @@ type Notification = {
 };
 
 function toastFor(n: Notification) {
+  const urgentTypes = new Set(["order_modified", "order_cancelled"]);
   emitToast({
     title: n.title,
     message:
       n.message.length > 100 ? n.message.slice(0, 100) + "..." : n.message,
-    type: n.type === "order_modified" ? "warning" : "success",
+    type: urgentTypes.has(n.type) ? "warning" : "success",
     notificationId: n.id,
   });
 }
@@ -48,6 +50,11 @@ export function NotificationPoller() {
     const handleNew = (n: Notification) => {
       if (!n.id || lastIdsRef.current.has(n.id)) return;
       lastIdsRef.current.add(n.id);
+
+      // Two-tier alert strategy: Tier 1 alerts get an audio chime + toast;
+      // Tier 2 status updates are silent (the bell badge updates on its own
+      // via its own realtime subscription).
+      if (!isTier1(n.type, profile.role)) return;
       playNotificationSound();
       toastFor(n);
     };

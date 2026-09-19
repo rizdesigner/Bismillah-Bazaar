@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "./session-provider";
 import { createClient } from "@/lib/supabase-client";
+import { isTier1 } from "@/lib/notification-tiers";
 
 type Notification = {
   id: string;
@@ -130,12 +131,19 @@ export function NotificationBell() {
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const hasUrgent = notifications.some(
+    (n) => !n.read && isTier1(n.type, profile?.role)
+  );
 
   return (
     <div className="relative">
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="relative rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+        className={`relative rounded-lg p-2 transition-colors ${
+          hasUrgent
+            ? "bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
+            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+        }`}
         title="Notifications"
       >
         <svg
