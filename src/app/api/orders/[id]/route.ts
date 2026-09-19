@@ -102,7 +102,7 @@ export async function PATCH(
         };
       });
 
-      await supabase
+      const { error: updateError } = await supabase
         .from('orders')
         .update({
           amendment_pending: true,
@@ -110,6 +110,14 @@ export async function PATCH(
           amendment_requested_by: user.id,
         })
         .eq('id', id);
+
+      if (updateError) {
+        console.error("Amendment update error:", updateError);
+        return NextResponse.json(
+          { error: "Failed to save amendment request" },
+          { status: 500 }
+        );
+      }
 
       const { data: admins } = await supabase
         .from('users')
