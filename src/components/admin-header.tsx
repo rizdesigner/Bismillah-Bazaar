@@ -74,7 +74,6 @@ export function AdminHeader() {
             event: "INSERT",
             schema: "public",
             table: "notifications",
-            filter: `user_id=eq.${profile.id}`,
           },
           (payload) => {
             const row = payload.new as any;
