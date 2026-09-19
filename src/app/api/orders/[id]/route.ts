@@ -41,7 +41,7 @@ export async function PATCH(
       );
     }
 
-    if (order.status !== "pending" && order.status !== "confirmed") {
+    if (order.status !== "pending" && order.status !== "confirmed" && order.status !== "modified") {
       return NextResponse.json(
         { error: "Orders can only be edited while pending or ongoing" },
         { status: 400 }
@@ -87,6 +87,46 @@ export async function PATCH(
           { status: 400 }
         );
       }
+    }
+
+    const isAmendment = order.status === "confirmed";
+
+    if (isAmendment) {
+      const proposedChanges = normalized.map((item) => {
+        const inventory = inventoryById.get(item.itemId)!;
+        return {
+          itemId: item.itemId,
+          itemName: inventory.item_name,
+          requestedKg: item.requestedKg,
+          orderItemId: item.orderItemId || null,
+        };
+      });
+
+      await supabase
+        .from('orders')
+        .update({
+          amendment_pending: true,
+          proposed_changes: proposedChanges,
+          amendment_requested_by: user.id,
+        })
+        .eq('id', id);
+
+      const { data: admins } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'admin');
+
+      for (const admin of (admins || [])) {
+        await notifyUser(supabase, {
+          userId: admin.id,
+          orderId: id,
+          type: "amendment_requested",
+          title: "Amendment Requested",
+          message: `${order.user.restaurant_name || order.user.email} requested changes to order #${id.slice(0, 8)}.`,
+        });
+      }
+
+      return NextResponse.json({ success: true, amendment: true });
     }
 
     const existingItemsById = new Map<string, any>(order.items.map((i: any) => [i.id, i]));

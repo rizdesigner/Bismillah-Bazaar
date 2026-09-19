@@ -96,6 +96,12 @@ export function OrderEditModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {order.status === "confirmed" && (
+            <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
+              This order is confirmed. Item quantity changes will be sent as an amendment request for restaurant approval.
+            </p>
+          )}
+
           {order.requestedEta && (
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-blue-600">
@@ -213,7 +219,9 @@ export function OrderEditModal({
               disabled={loading}
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
             >
-              {loading ? "Saving..." : "Save Changes"}
+              {loading
+                ? (order.status === "confirmed" ? "Requesting..." : "Saving...")
+                : (order.status === "confirmed" ? "Request Amendment" : "Save Changes")}
             </button>
           </div>
         </form>

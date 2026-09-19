@@ -29,6 +29,8 @@ type Order = {
   paidAt: string | null;
   createdAt: string;
   note: string | null;
+  amendmentPending: boolean;
+  proposedChanges: any[] | null;
   items: OrderItem[];
 };
 
@@ -59,6 +61,7 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
   const [activeTab, setActiveTab] = useState<"active" | "delivered">("active");
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [amendmentActionId, setAmendmentActionId] = useState<string | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editItems, setEditItems] = useState<EditItem[]>([]);
   const [newItemId, setNewItemId] = useState("");
@@ -109,6 +112,52 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
       alert("An error occurred");
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  const handleAmendmentAccept = async (orderId: string) => {
+    if (!confirm("Accept the proposed changes to this order?")) return;
+    setAmendmentActionId(orderId);
+
+    try {
+      const res = await fetch(`/api/orders/${orderId}/amendment/accept`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to accept amendment");
+        return;
+      }
+
+      window.location.reload();
+    } catch {
+      alert("An error occurred");
+    } finally {
+      setAmendmentActionId(null);
+    }
+  };
+
+  const handleAmendmentReject = async (orderId: string) => {
+    if (!confirm("Reject the proposed changes? The original order will remain unchanged.")) return;
+    setAmendmentActionId(orderId);
+
+    try {
+      const res = await fetch(`/api/orders/${orderId}/amendment/reject`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to reject amendment");
+        return;
+      }
+
+      window.location.reload();
+    } catch {
+      alert("An error occurred");
+    } finally {
+      setAmendmentActionId(null);
     }
   };
 
@@ -246,6 +295,11 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                   >
                     {order.status}
                   </span>
+                  {order.amendmentPending && (
+                    <span className="mt-2 ml-2 inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-medium text-orange-700">
+                      Amendment Pending
+                    </span>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   {canEdit(order.status) && (
@@ -273,6 +327,24 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                     >
                       {cancellingId === order.id ? "Cancelling..." : "Cancel Order"}
                     </button>
+                  )}
+                  {order.amendmentPending && (
+                    <>
+                      <button
+                        onClick={() => handleAmendmentAccept(order.id)}
+                        disabled={amendmentActionId === order.id}
+                        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                      >
+                        {amendmentActionId === order.id ? "Accepting..." : "Accept Changes"}
+                      </button>
+                      <button
+                        onClick={() => handleAmendmentReject(order.id)}
+                        disabled={amendmentActionId === order.id}
+                        className="rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        {amendmentActionId === order.id ? "Rejecting..." : "Reject Changes"}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -430,7 +502,9 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
             </div>
 
             <p className="mb-4 rounded-lg bg-amber-50 p-2 text-[10px] text-amber-700 sm:text-xs">
-              Editing will revert this order to Pending for the admin to re-review. Final price and admin ETA will be reset.
+              {editingOrder.status === "confirmed"
+                ? "This order is confirmed. Your changes will be sent as an amendment request for admin approval."
+                : "Editing will revert this order to Pending for the admin to re-review. Final price and admin ETA will be reset."}
             </p>
 
             <div className="space-y-2">
@@ -540,7 +614,9 @@ export function OrderHistory({ orders, inventory }: { orders: Order[]; inventory
                 disabled={loading}
                 className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 sm:flex-none sm:px-4 sm:text-sm"
               >
-                {loading ? "Saving..." : "Save Changes"}
+                {loading
+                  ? (editingOrder.status === "confirmed" ? "Requesting..." : "Saving...")
+                  : (editingOrder.status === "confirmed" ? "Request Amendment" : "Save Changes")}
               </button>
             </div>
           </div>

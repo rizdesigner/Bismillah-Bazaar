@@ -88,6 +88,9 @@ model Order {
   paymentStatus   PaymentStatus @default(unpaid) @map("payment_status")
   paymentMethod   PaymentMethod? @map("payment_method")
   paidAt          DateTime?     @map("paid_at")
+  amendmentPending Boolean      @default(false) @map("amendment_pending")
+  proposedChanges  Json?        @map("proposed_changes") @db.JsonB
+  amendmentRequestedBy String? @map("amendment_requested_by") @db.Uuid
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)

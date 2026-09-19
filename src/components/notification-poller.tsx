@@ -16,7 +16,7 @@ type Notification = {
 };
 
 function toastFor(n: Notification) {
-  const urgentTypes = new Set(["order_modified", "order_cancelled"]);
+  const urgentTypes = new Set(["order_modified", "order_cancelled", "amendment_requested", "amendment_accepted", "amendment_rejected"]);
   emitToast({
     title: n.title,
     message:

@@ -43,6 +43,8 @@ export default async function OrdersPage() {
     deliveredAt: order.delivered_at ?? null,
     dueDate: order.due_date ?? null,
     paidAt: order.paid_at ?? null,
+    amendmentPending: order.amendment_pending ?? false,
+    proposedChanges: order.proposed_changes ?? null,
     items: (order.order_items ?? []).map((oi: any) => ({
       id: oi.id,
       orderId: oi.order_id,

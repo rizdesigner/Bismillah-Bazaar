@@ -61,6 +61,9 @@ export default async function AdminPage() {
     deliveredAt: order.delivered_at ?? null,
     dueDate: order.due_date ?? null,
     paidAt: order.paid_at ?? null,
+    amendmentPending: order.amendment_pending ?? false,
+    proposedChanges: order.proposed_changes ?? null,
+    amendmentRequestedBy: order.amendment_requested_by ?? null,
     user: {
       id: order.users?.id ?? "",
       email: order.users?.email ?? "",
