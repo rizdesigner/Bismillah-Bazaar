@@ -42,6 +42,7 @@ export function NotificationPoller() {
   useEffect(() => {
     if (!profile?.id) return;
 
+    const isAdmin = profile.role === "admin";
     const supabase = createClient();
 
     const handleNew = (n: Notification) => {
@@ -54,18 +55,25 @@ export function NotificationPoller() {
     // Toasts should only fire for NEW real-time INSERT events pushed while
     // this page is open. Historical unread notifications are loaded separately
     // by the bell dropdown and must NOT trigger pop-up toasts.
+    //
+    // Admins receive notifications that belong to the role as a whole (new
+    // registrations, new orders, etc.), so they subscribe WITHOUT a user_id
+    // filter and get every INSERT on the notifications table. Restaurants
+    // only get their own, so they keep the user_id filter.
     const realtimeChannel = supabase.channel(
       `notifications-insert-${profile.id}`
     );
     realtimeChannel
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${profile.id}`,
-        },
+        isAdmin
+          ? { event: "INSERT", schema: "public", table: "notifications" }
+          : {
+              event: "INSERT",
+              schema: "public",
+              table: "notifications",
+              filter: `user_id=eq.${profile.id}`,
+            },
         (payload) => {
           handleNew(mapInsert(payload));
         }
@@ -85,7 +93,7 @@ export function NotificationPoller() {
       supabase.removeChannel(realtimeChannel);
       supabase.removeChannel(fallbackChannel);
     };
-  }, [profile?.id]);
+  }, [profile?.id, profile?.role]);
 
   return null;
 }
