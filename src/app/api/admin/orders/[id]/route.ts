@@ -44,6 +44,40 @@ export async function PATCH(
       );
     }
 
+    const isAmendment = order.status === "confirmed" && items && Array.isArray(items) && items.length > 0;
+
+    if (isAmendment) {
+      const proposedChanges = items.map((item: any) => {
+        const orderItem = order.items.find((oi: any) => oi.id === item.id);
+        return {
+          orderItemId: item.id,
+          itemId: orderItem?.item_id,
+          itemName: orderItem?.item?.item_name,
+          requestedKg: orderItem?.requested_kg,
+          fulfilledKg: item.fulfilledKg,
+        };
+      });
+
+      await supabase
+        .from('orders')
+        .update({
+          amendment_pending: true,
+          proposed_changes: proposedChanges,
+          amendment_requested_by: user.id,
+        })
+        .eq('id', id);
+
+      await notifyUser(supabase, {
+        userId: order.user_id,
+        orderId: id,
+        type: "amendment_requested",
+        title: "Amendment Requested",
+        message: `Admin requested changes to your order #${order.order_number}.`,
+      });
+
+      return NextResponse.json({ success: true, amendment: true });
+    }
+
     const changes: string[] = [];
 
     if (items && Array.isArray(items)) {

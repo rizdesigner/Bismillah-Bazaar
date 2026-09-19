@@ -39,6 +39,9 @@ type Order = {
   paidAt: string | null;
   createdAt: string;
   note: string | null;
+  amendmentPending: boolean;
+  proposedChanges: any[] | null;
+  amendmentRequestedBy: string | null;
   user: {
     id: string;
     restaurantName: string | null;
@@ -573,6 +576,53 @@ function OrdersTab({ orders }: { orders: Order[] }) {
     status: "pending",
   });
   const [loading, setLoading] = useState(false);
+  const [amendmentActionId, setAmendmentActionId] = useState<string | null>(null);
+
+  const handleAmendmentAccept = async (orderId: string) => {
+    if (!confirm("Accept the proposed changes to this order?")) return;
+    setAmendmentActionId(orderId);
+
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/amendment/accept`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to accept amendment");
+        return;
+      }
+
+      window.location.reload();
+    } catch {
+      alert("An error occurred");
+    } finally {
+      setAmendmentActionId(null);
+    }
+  };
+
+  const handleAmendmentReject = async (orderId: string) => {
+    if (!confirm("Reject the proposed changes? The original order will remain unchanged.")) return;
+    setAmendmentActionId(orderId);
+
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/amendment/reject`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to reject amendment");
+        return;
+      }
+
+      window.location.reload();
+    } catch {
+      alert("An error occurred");
+    } finally {
+      setAmendmentActionId(null);
+    }
+  };
 
   const handleConfirmOrder = (order: Order) => {
     setEditingOrder(order);
@@ -669,6 +719,11 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                   >
                     {order.status}
                   </span>
+                  {order.amendmentPending && (
+                    <span className="inline-flex rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
+                      Amendment
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1 text-[10px] font-medium text-zinc-500">
                   {order.orderNumber}
@@ -689,28 +744,49 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 </div>
               </div>
               <div className="flex flex-col gap-1">
-                {order.status === "pending" ? (
-                  <button
-                    onClick={() => handleConfirmOrder(order)}
-                    className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-emerald-500"
-                  >
-                    Confirm
-                  </button>
+                {order.amendmentPending ? (
+                  <>
+                    <button
+                      onClick={() => handleAmendmentAccept(order.id)}
+                      disabled={amendmentActionId === order.id}
+                      className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                    >
+                      {amendmentActionId === order.id ? "..." : "Accept"}
+                    </button>
+                    <button
+                      onClick={() => handleAmendmentReject(order.id)}
+                      disabled={amendmentActionId === order.id}
+                      className="rounded border border-red-300 px-2 py-1 text-[10px] font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {amendmentActionId === order.id ? "..." : "Reject"}
+                    </button>
+                  </>
                 ) : (
-                  <button
-                    onClick={() => handleEdit(order)}
-                    className="rounded px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-50"
-                  >
-                    Edit
-                  </button>
-                )}
-                {order.status === "confirmed" && (
-                  <button
-                    onClick={() => handleDeliver(order.id)}
-                    className="rounded bg-emerald-600 px-3 py-1.5 text-[10px] font-medium text-white hover:bg-emerald-500"
-                  >
-                    Mark Delivered
-                  </button>
+                  <>
+                    {order.status === "pending" ? (
+                      <button
+                        onClick={() => handleConfirmOrder(order)}
+                        className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-emerald-500"
+                      >
+                        Confirm
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleEdit(order)}
+                        className="rounded px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-50"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {order.status === "confirmed" && (
+                      <button
+                        onClick={() => handleDeliver(order.id)}
+                        className="rounded bg-emerald-600 px-3 py-1.5 text-[10px] font-medium text-white hover:bg-emerald-500"
+                      >
+                        Mark Delivered
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -800,31 +876,59 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                         >
                           {order.status}
                         </span>
+                        {order.amendmentPending && (
+                          <div className="mt-1">
+                            <span className="inline-flex rounded-full bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700">
+                              Amendment
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right" rowSpan={order.items.length}>
                         <div className="flex justify-end gap-2">
-                          {order.status === "pending" ? (
-                            <button
-                              onClick={() => handleConfirmOrder(order)}
-                              className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500"
-                            >
-                              Confirm
-                            </button>
+                          {order.amendmentPending ? (
+                            <>
+                              <button
+                                onClick={() => handleAmendmentAccept(order.id)}
+                                disabled={amendmentActionId === order.id}
+                                className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                              >
+                                {amendmentActionId === order.id ? "..." : "Accept"}
+                              </button>
+                              <button
+                                onClick={() => handleAmendmentReject(order.id)}
+                                disabled={amendmentActionId === order.id}
+                                className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                              >
+                                {amendmentActionId === order.id ? "..." : "Reject"}
+                              </button>
+                            </>
                           ) : (
-                            <button
-                              onClick={() => handleEdit(order)}
-                              className="text-xs font-medium text-emerald-600 hover:text-emerald-500"
-                            >
-                              Edit
-                            </button>
-                          )}
-                          {order.status === "confirmed" && (
-                            <button
-                              onClick={() => handleDeliver(order.id)}
-                              className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500"
-                            >
-                              Mark Delivered
-                            </button>
+                            <>
+                              {order.status === "pending" ? (
+                                <button
+                                  onClick={() => handleConfirmOrder(order)}
+                                  className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500"
+                                >
+                                  Confirm
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleEdit(order)}
+                                  className="text-xs font-medium text-emerald-600 hover:text-emerald-500"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              {order.status === "confirmed" && (
+                                <button
+                                  onClick={() => handleDeliver(order.id)}
+                                  className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500"
+                                >
+                                  Mark Delivered
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>
